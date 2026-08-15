@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>clone-requests</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <header class="top">
+      <div class="brand">
+        <strong>clone-requests</strong>
+        <span id="tab-label" class="muted">Nenhuma aba</span>
+      </div>
+      <button id="record-btn" type="button" class="record">Gravar</button>
+    </header>
+
+    <p id="status" class="status" hidden></p>
+
+    <section class="filters">
+      <button id="filters-toggle" type="button" class="linkish">
+        Filtros <span id="filter-count">(0)</span>
+      </button>
+      <div id="filters-panel" class="filters-panel" hidden>
+        <p class="hint">
+          Sem filtro ativo, nada é gravado. Use padrões como
+          <code>https://api.exemplo.com/*</code>
+        </p>
+        <form id="filter-form" class="row">
+          <input
+            id="filter-input"
+            type="text"
+            placeholder="https://api.exemplo.com/*"
+            autocomplete="off"
+          />
+          <button type="submit">Adicionar</button>
+        </form>
+        <ul id="filter-list" class="filter-list"></ul>
+      </div>
+    </section>
+
+    <section class="search">
+      <input id="search-input" type="search" placeholder="Buscar URL, método ou status" />
+    </section>
+
+    <section class="layout">
+      <ul id="request-list" class="request-list"></ul>
+      <article id="detail" class="detail empty">
+        <p class="muted">Selecione uma requisição para ver os detalhes.</p>
+      </article>
+    </section>
+
+    <footer class="footer">
+      <button id="clear-btn" type="button" class="danger ghost">Limpar histórico</button>
+    </footer>
+
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

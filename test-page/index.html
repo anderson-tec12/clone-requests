@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>clone-requests — página de teste</title>
+    <style>
+      :root { color-scheme: dark; font-family: "Segoe UI", sans-serif; }
+      body { margin: 2rem auto; max-width: 720px; background: #101218; color: #e8ecf4; }
+      button { margin: 0 8px 8px 0; padding: 8px 12px; }
+      pre { background: #0c0f16; padding: 12px; border-radius: 8px; overflow: auto; }
+      code { color: #9db7ff; }
+    </style>
+  </head>
+  <body>
+    <h1>Página de teste — clone-requests</h1>
+    <p>
+      Na extensão, adicione o filtro
+      <code>https://jsonplaceholder.typicode.com/*</code>
+      e clique em <strong>Gravar</strong> nesta aba.
+    </p>
+    <p>
+      O GET/POST abaixo devem ser clonados. O request para a PokeAPI não deve entrar.
+    </p>
+    <p>
+      <button id="get-todo" type="button">GET /todos/1</button>
+      <button id="post-post" type="button">POST /posts</button>
+      <button id="get-other" type="button">GET pokeapi (fora do filtro)</button>
+    </p>
+    <pre id="out">Aguardando...</pre>
+    <script>
+      const out = document.getElementById('out');
+      async function run(label, fn) {
+        out.textContent = label + '...\n';
+        try {
+          const result = await fn();
+          out.textContent = label + '\n' + JSON.stringify(result, null, 2);
+        } catch (error) {
+          out.textContent = label + '\n' + String(error);
+        }
+      }
+      document.getElementById('get-todo').onclick = () =>
+        run('GET todo', async () => {
+          const res = await fetch('https://jsonplaceholder.typicode.com/todos/1');
+          return { status: res.status, body: await res.json() };
+        });
+      document.getElementById('post-post').onclick = () =>
+        run('POST post', async () => {
+          const res = await fetch('https://jsonplaceholder.typicode.com/posts', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ title: 'clone-requests', body: 'teste', userId: 1 }),
+          });
+          return { status: res.status, body: await res.json() };
+        });
+      document.getElementById('get-other').onclick = () =>
+        run('GET pokeapi', async () => {
+          const res = await fetch('https://pokeapi.co/api/v2/pokemon/ditto');
+          const body = await res.json();
+          return { status: res.status, body: { name: body.name, id: body.id } };
+        });
+    </script>
+  </body>
+</html>
