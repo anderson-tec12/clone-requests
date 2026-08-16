@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>clone-requests</title>
+    <link rel="stylesheet" href="../../../entrypoints/sidepanel/style.css" />
+  </head>
+  <body>
+    <header class="top">
+      <div class="brand">
+        <strong>clone-requests</strong>
+        <span class="muted">clone-requests — página de teste</span>
+      </div>
+      <button type="button" class="record on">Parar</button>
+    </header>
+
+    <p class="status">Gravando requisições que casam com os filtros.</p>
+
+    <section class="filters">
+      <button type="button" class="linkish">Filtros <span>(1)</span></button>
+    </section>
+
+    <section class="search">
+      <input type="search" placeholder="Buscar URL, método ou status" />
+    </section>
+
+    <section class="layout">
+      <ul class="request-list">
+        <li style="cursor: default; grid-template-columns: 1fr">
+          Nenhuma requisição clonada ainda.
+        </li>
+      </ul>
+      <article class="detail empty">
+        <p class="muted">Selecione uma requisição para ver os detalhes.</p>
+      </article>
+    </section>
+
+    <footer class="footer">
+      <button type="button" disabled>Exportar todos</button>
+      <button type="button" class="danger ghost">Limpar histórico</button>
+    </footer>
+  </body>
+</html>
