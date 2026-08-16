@@ -1,5 +1,11 @@
 import { browser } from 'wxt/browser';
 import { toCurl } from '../../lib/curl';
+import {
+  filenameForAll,
+  filenameForRequest,
+  requestToJson,
+  requestsToJson,
+} from '../../lib/exportJson';
 import { formatBody, formatTime, pathFromUrl } from '../../lib/format';
 import { isValidMatchPattern } from '../../lib/matchUrl';
 import { isRestrictedUrl, originPatternFromUrl } from '../../lib/origin';
@@ -33,6 +39,7 @@ const filterList = document.querySelector('#filter-list') as HTMLUListElement;
 const searchInput = document.querySelector('#search-input') as HTMLInputElement;
 const requestList = document.querySelector('#request-list') as HTMLUListElement;
 const detail = document.querySelector('#detail') as HTMLElement;
+const exportAllBtn = document.querySelector('#export-all-btn') as HTMLButtonElement;
 const clearBtn = document.querySelector('#clear-btn') as HTMLButtonElement;
 
 let state: PanelState = {
@@ -60,6 +67,7 @@ async function boot() {
     query = searchInput.value;
     renderList();
   });
+  exportAllBtn.addEventListener('click', () => exportAll());
   clearBtn.addEventListener('click', () => void clearHistory());
   browser.runtime.onMessage.addListener((message) => {
     const msg = message as { type?: string };
@@ -103,6 +111,7 @@ function render() {
   recordBtn.textContent = recording ? 'Parar' : 'Gravar';
   recordBtn.classList.toggle('on', recording);
   recordBtn.disabled = !tab?.id || tab.restricted;
+  exportAllBtn.disabled = state.requests.length === 0;
   filterCount.textContent = `(${state.filters.length})`;
   renderFilters();
   renderList();
@@ -159,7 +168,15 @@ function renderList() {
     const time = document.createElement('span');
     time.className = 'muted';
     time.textContent = formatTime(item.capturedAt);
-    li.append(method, status, path, time);
+    const jsonBtn = document.createElement('button');
+    jsonBtn.type = 'button';
+    jsonBtn.className = 'json-btn';
+    jsonBtn.textContent = 'JSON';
+    jsonBtn.addEventListener('click', (event) => {
+      event.stopPropagation();
+      downloadRequest(item);
+    });
+    li.append(method, status, path, time, jsonBtn);
     li.addEventListener('click', () => {
       selectedId = item.id;
       renderList();
@@ -198,6 +215,7 @@ function renderDetail() {
   actions.append(
     actionButton('Repetir', () => void replay(item.id)),
     actionButton('Copiar cURL', () => void copyCurl(item)),
+    actionButton('Baixar JSON', () => downloadRequest(item)),
     actionButton('Excluir', () => void removeRequest(item.id), true),
   );
   detail.append(actions);
@@ -350,6 +368,27 @@ async function replay(id: string) {
 async function copyCurl(item: ClonedRequest) {
   await navigator.clipboard.writeText(toCurl(item));
   showStatus('cURL copiado.');
+}
+
+function downloadJson(filename: string, text: string) {
+  const blob = new Blob([text], { type: 'application/json' });
+  const href = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = href;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(href);
+}
+
+function downloadRequest(item: ClonedRequest) {
+  downloadJson(filenameForRequest(item), requestToJson(item));
+  showStatus('JSON baixado.');
+}
+
+function exportAll() {
+  if (state.requests.length === 0) return;
+  downloadJson(filenameForAll(), requestsToJson(state.requests));
+  showStatus(`${state.requests.length} requests exportadas.`);
 }
 
 async function removeRequest(id: string) {

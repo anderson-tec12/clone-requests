@@ -34,7 +34,7 @@ O ícone da extensão abre o **painel lateral**.
 2. Em **Filtros**, adicione um padrão de URL, por exemplo `https://api.exemplo.com/*`.
 3. Clique em **Gravar** e aceite a permissão da origem da aba.
 4. Dispare as chamadas de API. Só entram requests `fetch`/`XHR` que casam com o filtro.
-5. Consulte a lista, abra o detalhe, **Repetir**, **Copiar cURL** ou excluir.
+5. Consulte a lista, abra o detalhe, **Repetir**, **Copiar cURL**, **Baixar JSON** ou excluir. Na lista, o botão **JSON** baixa só aquela requisição; **Exportar todos** no rodapé gera um único `.json` com o histórico.
 
 Sem filtro cadastrado, nada é gravado. A gravação é **por aba** e sobrevive a reload enquanto estiver ativa.
 
