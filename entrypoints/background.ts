@@ -1,7 +1,7 @@
 import { browser } from 'wxt/browser';
 import { buildClonedRequest } from '../lib/clone';
-import { sanitizeReplayHeaders } from '../lib/headers';
 import { matchesAnyFilter } from '../lib/matchUrl';
+import { buildReplayInit } from '../lib/replay';
 import { isRestrictedUrl } from '../lib/origin';
 import { truncateBody } from '../lib/body';
 import {
@@ -18,6 +18,7 @@ import {
   saveRequest,
   updateRequest,
 } from '../lib/storage';
+import type { PageReplayResultPayload } from '../lib/protocol';
 import type { CapturedPayload, ClonedRequest, ExtensionMessage, ReplayResult } from '../lib/types';
 
 const recordingTabs = new Set<number>();
@@ -92,6 +93,8 @@ async function handleMessage(
       return { ok: true };
     case 'REPLAY':
       return replayRequest(message.id, message.tabId);
+    case 'REPLAY_IN_PAGE':
+      return;
     case 'CAPTURED':
       return captureFromTab(message.payload, sender);
     default:
@@ -124,7 +127,7 @@ async function stopRecording(tabId: number) {
   return { ok: true, recordingTabIds: [...recordingTabs] };
 }
 
-async function injectIntoTab(tabId: number) {
+async function injectIntoTab(tabId: number, rethrow = false) {
   try {
     await browser.scripting.executeScript({
       target: { tabId, allFrames: true },
@@ -140,6 +143,7 @@ async function injectIntoTab(tabId: number) {
     });
   } catch (error) {
     console.warn('clone-requests: falha ao injetar scripts', error);
+    if (rethrow) throw error;
   }
 }
 
@@ -196,42 +200,27 @@ async function replayRequest(id: string, tabId: number) {
 }
 
 async function replayInTab(tabId: number, req: ClonedRequest): Promise<ReplayResult> {
-  const headers = sanitizeReplayHeaders(req.requestHeaders);
-  const results = await browser.scripting.executeScript({
-    target: { tabId },
-    world: 'MAIN',
-    func: async (
-      url: string,
-      method: string,
-      requestHeaders: Record<string, string>,
-      body: string | null,
-    ) => {
-      const started = performance.now();
-      const init: RequestInit = {
-        method,
-        headers: requestHeaders,
-        credentials: 'include',
-      };
-      if (body && method !== 'GET' && method !== 'HEAD') {
-        init.body = body;
-      }
-      const response = await fetch(url, init);
-      const responseHeaders: Record<string, string> = {};
-      response.headers.forEach((value, key) => {
-        responseHeaders[key] = value;
-      });
-      return {
-        status: response.status,
-        statusText: response.statusText,
-        responseHeaders,
-        responseBody: await response.text(),
-        durationMs: Math.round(performance.now() - started),
-      };
-    },
-    args: [req.url, req.method, headers, req.requestBody],
-  });
+  await injectIntoTab(tabId, true);
+  const payload = buildReplayInit(req);
+  let response: { result?: PageReplayResultPayload; error?: string } | undefined;
+  try {
+    response = (await browser.tabs.sendMessage(
+      tabId,
+      { type: 'REPLAY_IN_PAGE', payload },
+      { frameId: 0 },
+    )) as { result?: PageReplayResultPayload; error?: string } | undefined;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (/Receiving end does not exist/i.test(message)) {
+      throw new Error('Não foi possível falar com a página. Recarregue a aba e tente de novo.');
+    }
+    throw new Error(
+      message || 'Não foi possível falar com a página. Recarregue a aba e tente de novo.',
+    );
+  }
 
-  const value = results[0]?.result;
+  if (response?.error) throw new Error(response.error);
+  const value = response?.result;
   if (!value) throw new Error('a página não retornou resultado');
 
   const truncated = truncateBody(value.responseBody || null);

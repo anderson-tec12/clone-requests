@@ -352,17 +352,22 @@ async function replay(id: string) {
     showStatus('Abra a aba original para repetir a requisição.', true);
     return;
   }
-  const result = (await browser.runtime.sendMessage({
-    type: 'REPLAY',
-    id,
-    tabId,
-  })) as { error?: string; request?: ClonedRequest };
-  if (result?.error) {
-    showStatus(result.error, true);
-    return;
+  try {
+    const result = (await browser.runtime.sendMessage({
+      type: 'REPLAY',
+      id,
+      tabId,
+    })) as { error?: string; request?: ClonedRequest };
+    if (result?.error) {
+      showStatus(result.error, true);
+      return;
+    }
+    showStatus('Requisição repetida na página.');
+    await refresh();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    showStatus(`Falha ao repetir: ${message}`, true);
   }
-  showStatus('Requisição repetida na página.');
-  await refresh();
 }
 
 async function copyCurl(item: ClonedRequest) {
