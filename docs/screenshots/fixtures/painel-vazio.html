@@ -17,6 +17,26 @@
 
     <section class="filters">
       <button type="button" class="linkish">Filtros <span>(0)</span></button>
+      <div class="filters-panel">
+        <p class="hint">
+          Nenhum filtro ativo. Sem filtro, nada é gravado.
+        </p>
+        <form class="row">
+          <input
+            type="text"
+            placeholder="https://api.exemplo.com/*"
+            autocomplete="off"
+          />
+          <button type="button">Adicionar</button>
+        </form>
+        <p class="filter-example">
+          Exemplo:
+          <button type="button" class="filter-example-btn">
+            <code>https://api.exemplo.com/*</code>
+          </button>
+        </p>
+        <ul class="filter-list"></ul>
+      </div>
     </section>
 
     <section class="search">

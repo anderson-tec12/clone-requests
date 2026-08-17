@@ -49,7 +49,7 @@ O ícone da extensão abre o **painel lateral**.
 ## Como usar
 
 1. Abra o site da aplicação (ou a [página de teste](#página-de-teste)).
-2. No painel, abra **Filtros** e adicione um padrão de URL, por exemplo `https://api.exemplo.com/*`.
+2. No painel, o bloco de **Filtros** já abre se não houver nenhum cadastrado. Adicione um padrão de URL, por exemplo `https://api.exemplo.com/*`.
 
 ![Filtros com padrão jsonplaceholder cadastrado](docs/screenshots/filtros.png)
 

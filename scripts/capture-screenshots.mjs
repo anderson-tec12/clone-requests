@@ -1,5 +1,5 @@
 /**
- * Regenera os PNGs do README a partir das fixtures HTML.
+ * Regenera os PNGs do README e o JPEG da Chrome Web Store a partir das fixtures HTML.
  *
  *   npm install --no-save playwright
  *   npx playwright install chromium
@@ -45,6 +45,15 @@ const shots = [
     width: 900,
     height: 640,
   },
+  {
+    src: path.join(fixturesDir, 'loja.html'),
+    out: path.join(outDir, 'loja-1280x800.jpg'),
+    width: 1280,
+    height: 800,
+    deviceScaleFactor: 1,
+    type: 'jpeg',
+    quality: 90,
+  },
 ];
 
 await mkdir(outDir, { recursive: true });
@@ -54,10 +63,15 @@ try {
   for (const shot of shots) {
     const page = await browser.newPage({
       viewport: { width: shot.width, height: shot.height },
-      deviceScaleFactor: 2,
+      deviceScaleFactor: shot.deviceScaleFactor ?? 2,
     });
     await page.goto(pathToFileURL(shot.src).href, { waitUntil: 'load' });
-    await page.screenshot({ path: shot.out, fullPage: false });
+    await page.screenshot({
+      path: shot.out,
+      fullPage: false,
+      omitBackground: false,
+      ...(shot.type ? { type: shot.type, quality: shot.quality } : {}),
+    });
     await page.close();
     console.log(`wrote ${path.relative(root, shot.out)}`);
   }

@@ -35,6 +35,9 @@ const filtersPanel = document.querySelector('#filters-panel') as HTMLElement;
 const filterCount = document.querySelector('#filter-count') as HTMLElement;
 const filterForm = document.querySelector('#filter-form') as HTMLFormElement;
 const filterInput = document.querySelector('#filter-input') as HTMLInputElement;
+const filterHint = document.querySelector('#filter-hint') as HTMLElement;
+const filterExample = document.querySelector('#filter-example') as HTMLElement;
+const filterExampleBtn = document.querySelector('#filter-example-btn') as HTMLButtonElement;
 const filterList = document.querySelector('#filter-list') as HTMLUListElement;
 const searchInput = document.querySelector('#search-input') as HTMLInputElement;
 const requestList = document.querySelector('#request-list') as HTMLUListElement;
@@ -50,6 +53,9 @@ let state: PanelState = {
 };
 let selectedId: string | null = null;
 let query = '';
+let didFocusEmptyFilter = false;
+
+const EXAMPLE_FILTER = 'https://api.exemplo.com/*';
 
 void boot();
 
@@ -62,6 +68,10 @@ async function boot() {
   filterForm.addEventListener('submit', (event) => {
     event.preventDefault();
     void addFilter();
+  });
+  filterExampleBtn.addEventListener('click', () => {
+    filterInput.value = EXAMPLE_FILTER;
+    filterInput.focus();
   });
   searchInput.addEventListener('input', () => {
     query = searchInput.value;
@@ -124,6 +134,17 @@ function isRecording(): boolean {
 }
 
 function renderFilters() {
+  const empty = state.filters.length === 0;
+  filterHint.hidden = !empty;
+  filterExample.hidden = !empty;
+  if (empty) {
+    filtersPanel.hidden = false;
+    if (!didFocusEmptyFilter) {
+      didFocusEmptyFilter = true;
+      filterInput.focus();
+    }
+  }
+
   filterList.replaceChildren();
   for (const pattern of state.filters) {
     const li = document.createElement('li');
@@ -352,17 +373,22 @@ async function replay(id: string) {
     showStatus('Abra a aba original para repetir a requisição.', true);
     return;
   }
-  const result = (await browser.runtime.sendMessage({
-    type: 'REPLAY',
-    id,
-    tabId,
-  })) as { error?: string; request?: ClonedRequest };
-  if (result?.error) {
-    showStatus(result.error, true);
-    return;
+  try {
+    const result = (await browser.runtime.sendMessage({
+      type: 'REPLAY',
+      id,
+      tabId,
+    })) as { error?: string; request?: ClonedRequest };
+    if (result?.error) {
+      showStatus(result.error, true);
+      return;
+    }
+    showStatus('Requisição repetida na página.');
+    await refresh();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    showStatus(`Falha ao repetir: ${message}`, true);
   }
-  showStatus('Requisição repetida na página.');
-  await refresh();
 }
 
 async function copyCurl(item: ClonedRequest) {

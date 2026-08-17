@@ -22,9 +22,8 @@
         Filtros <span id="filter-count">(0)</span>
       </button>
       <div id="filters-panel" class="filters-panel" hidden>
-        <p class="hint">
-          Sem filtro ativo, nada é gravado. Use padrões como
-          <code>https://api.exemplo.com/*</code>
+        <p id="filter-hint" class="hint">
+          Nenhum filtro ativo. Sem filtro, nada é gravado.
         </p>
         <form id="filter-form" class="row">
           <input
@@ -35,6 +34,12 @@
           />
           <button type="submit">Adicionar</button>
         </form>
+        <p id="filter-example" class="filter-example">
+          Exemplo:
+          <button type="button" id="filter-example-btn" class="filter-example-btn">
+            <code>https://api.exemplo.com/*</code>
+          </button>
+        </p>
         <ul id="filter-list" class="filter-list"></ul>
       </div>
     </section>

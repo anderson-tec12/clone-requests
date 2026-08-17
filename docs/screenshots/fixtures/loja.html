@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>clone-requests — Chrome Web Store</title>
+    <link rel="stylesheet" href="../../../entrypoints/sidepanel/style.css" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 1280px;
+        height: 800px;
+        overflow: hidden;
+        background: #101218;
+      }
+
+      body {
+        display: block;
+        min-width: 0;
+      }
+
+      .store {
+        display: grid;
+        grid-template-columns: 840px 440px;
+        width: 1280px;
+        height: 800px;
+        background: #101218;
+      }
+
+      .page {
+        box-sizing: border-box;
+        padding: 2rem 2.5rem;
+        color: #e8ecf4;
+        font-family: "Segoe UI", sans-serif;
+        overflow: hidden;
+      }
+
+      .page h1 {
+        margin: 0 0 1rem;
+        font-size: 1.75rem;
+      }
+
+      .page p {
+        margin: 0 0 1rem;
+        line-height: 1.5;
+      }
+
+      .page button {
+        margin: 0 8px 8px 0;
+        padding: 8px 12px;
+      }
+
+      .page pre {
+        background: #0c0f16;
+        padding: 12px;
+        border-radius: 8px;
+        overflow: auto;
+        border: 1px solid #2a3142;
+      }
+
+      .page code {
+        color: #9db7ff;
+        font-family: "IBM Plex Mono", ui-monospace, monospace;
+      }
+
+      .panel {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        height: 800px;
+        overflow: hidden;
+        border-left: 1px solid #2a3142;
+        background: var(--bg);
+      }
+
+      .panel .layout {
+        grid-template-rows: auto 1fr;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="store">
+      <section class="page">
+        <h1>Página de teste — clone-requests</h1>
+        <p>
+          Na extensão, adicione o filtro
+          <code>https://jsonplaceholder.typicode.com/*</code>
+          e clique em <strong>Gravar</strong> nesta aba.
+        </p>
+        <p>
+          O GET/POST abaixo devem ser clonados. O request para a PokeAPI não deve entrar.
+        </p>
+        <p>
+          <button type="button">GET /todos/1</button>
+          <button type="button">POST /posts</button>
+          <button type="button">GET pokeapi (fora do filtro)</button>
+        </p>
+        <pre>POST post
+{
+  "status": 201,
+  "body": {
+    "title": "clone-requests",
+    "body": "teste",
+    "userId": 1,
+    "id": 101
+  }
+}</pre>
+      </section>
+
+      <aside class="panel">
+        <header class="top">
+          <div class="brand">
+            <strong>clone-requests</strong>
+            <span class="muted">clone-requests — página de teste</span>
+          </div>
+          <button type="button" class="record on">Parar</button>
+        </header>
+
+        <p class="status">Gravando requisições que casam com os filtros.</p>
+
+        <section class="filters">
+          <button type="button" class="linkish">Filtros <span>(1)</span></button>
+        </section>
+
+        <section class="search">
+          <input type="search" placeholder="Buscar URL, método ou status" />
+        </section>
+
+        <section class="layout">
+          <ul class="request-list">
+            <li>
+              <span class="method GET">GET</span>
+              <span class="status-code ok">200</span>
+              <span title="https://jsonplaceholder.typicode.com/todos/1">/todos/1</span>
+              <span class="muted">20:12:04</span>
+              <button type="button" class="json-btn">JSON</button>
+            </li>
+            <li class="active">
+              <span class="method POST">POST</span>
+              <span class="status-code ok">201</span>
+              <span title="https://jsonplaceholder.typicode.com/posts">/posts</span>
+              <span class="muted">20:12:08</span>
+              <button type="button" class="json-btn">JSON</button>
+            </li>
+          </ul>
+          <article class="detail">
+            <h2>POST https://jsonplaceholder.typicode.com/posts</h2>
+            <p class="muted">201 Created · 184 ms · 20:12:08</p>
+            <div class="actions">
+              <button type="button">Repetir</button>
+              <button type="button">Copiar cURL</button>
+              <button type="button">Baixar JSON</button>
+              <button type="button" class="danger ghost">Excluir</button>
+            </div>
+            <section class="kv">
+              <h3>Query params</h3>
+              <pre>(nenhum)</pre>
+            </section>
+            <section class="kv">
+              <h3>Headers da requisição</h3>
+              <pre>content-type: application/json</pre>
+            </section>
+            <section class="kv">
+              <h3>Payload</h3>
+              <pre>{
+  "title": "clone-requests",
+  "body": "teste",
+  "userId": 1
+}</pre>
+            </section>
+            <section class="kv">
+              <h3>Resposta</h3>
+              <pre>{
+  "title": "clone-requests",
+  "body": "teste",
+  "userId": 1,
+  "id": 101
+}</pre>
+            </section>
+          </article>
+        </section>
+
+        <footer class="footer">
+          <button type="button">Exportar todos</button>
+          <button type="button" class="danger ghost">Limpar histórico</button>
+        </footer>
+      </aside>
+    </div>
+  </body>
+</html>
