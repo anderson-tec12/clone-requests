@@ -142,6 +142,10 @@ button:disabled {
   cursor: pointer;
 }
 
+.filter-example-btn:hover {
+  border-color: transparent;
+}
+
 .filter-example-btn:hover code {
   color: var(--accent);
 }
