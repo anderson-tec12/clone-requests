@@ -1,5 +1,3 @@
-import type { ReplayInit } from './replay';
-
 export type ClonedRequest = {
   id: string;
   tabId: number;
@@ -41,11 +39,6 @@ export type CapturedPayload = {
   durationMs: number;
 };
 
-export type ReplayInPageMessage = {
-  type: 'REPLAY_IN_PAGE';
-  payload: ReplayInit;
-};
-
 export type ExtensionMessage =
   | { type: 'GET_STATE' }
   | { type: 'START_RECORDING'; tabId: number }
@@ -56,8 +49,7 @@ export type ExtensionMessage =
   | { type: 'GET_REQUEST'; id: string }
   | { type: 'DELETE_REQUEST'; id: string }
   | { type: 'CLEAR_REQUESTS' }
-  | { type: 'REPLAY'; id: string; tabId: number }
-  | ReplayInPageMessage
+  | { type: 'REPLAY'; id: string }
   | { type: 'CAPTURED'; payload: CapturedPayload }
   | { type: 'GET_TAB_CONFIG' };
 

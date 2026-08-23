@@ -368,22 +368,34 @@ async function removeFilter(pattern: string) {
 }
 
 async function replay(id: string) {
-  const tabId = state.tab?.id;
-  if (!tabId) {
-    showStatus('Abra a aba original para repetir a requisição.', true);
+  const item = state.requests.find((request) => request.id === id);
+  if (!item) {
+    showStatus('Requisição não encontrada.', true);
     return;
   }
+
+  const origin = originPatternFromUrl(item.url);
+  if (!origin) {
+    showStatus('URL inválida para repetir a requisição.', true);
+    return;
+  }
+
+  const granted = await browser.permissions.request({ origins: [origin] });
+  if (!granted) {
+    showStatus('Permissão de acesso à API recusada.', true);
+    return;
+  }
+
   try {
     const result = (await browser.runtime.sendMessage({
       type: 'REPLAY',
       id,
-      tabId,
     })) as { error?: string; request?: ClonedRequest };
     if (result?.error) {
       showStatus(result.error, true);
       return;
     }
-    showStatus('Requisição repetida na página.');
+    showStatus('Requisição repetida pela extensão.');
     await refresh();
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

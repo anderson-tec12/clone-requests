@@ -1,7 +1,7 @@
 import { browser } from 'wxt/browser';
 import { buildClonedRequest } from '../lib/clone';
 import { matchesAnyFilter } from '../lib/matchUrl';
-import { buildReplayInit } from '../lib/replay';
+import { buildReplayInit, executeReplay } from '../lib/replay';
 import { isRestrictedUrl } from '../lib/origin';
 import { truncateBody } from '../lib/body';
 import {
@@ -18,8 +18,7 @@ import {
   saveRequest,
   updateRequest,
 } from '../lib/storage';
-import type { PageReplayResultPayload } from '../lib/protocol';
-import type { CapturedPayload, ClonedRequest, ExtensionMessage, ReplayResult } from '../lib/types';
+import type { CapturedPayload, ExtensionMessage, ReplayResult } from '../lib/types';
 
 const recordingTabs = new Set<number>();
 
@@ -92,9 +91,7 @@ async function handleMessage(
       await clearRequests();
       return { ok: true };
     case 'REPLAY':
-      return replayRequest(message.id, message.tabId);
-    case 'REPLAY_IN_PAGE':
-      return;
+      return replayRequest(message.id);
     case 'CAPTURED':
       return captureFromTab(message.payload, sender);
     default:
@@ -127,23 +124,22 @@ async function stopRecording(tabId: number) {
   return { ok: true, recordingTabIds: [...recordingTabs] };
 }
 
-async function injectIntoTab(tabId: number, rethrow = false) {
+async function injectIntoTab(tabId: number) {
   try {
     await browser.scripting.executeScript({
       target: { tabId, allFrames: true },
-        files: ['/interceptor.js'],
+      files: ['/interceptor.js'],
       world: 'MAIN',
       injectImmediately: true,
     });
     await browser.scripting.executeScript({
       target: { tabId, allFrames: true },
-        files: ['/bridge.js'],
+      files: ['/bridge.js'],
       world: 'ISOLATED',
       injectImmediately: true,
     });
   } catch (error) {
     console.warn('clone-requests: falha ao injetar scripts', error);
-    if (rethrow) throw error;
   }
 }
 
@@ -185,52 +181,26 @@ async function captureFromTab(
   return { ok: true, id: item.id };
 }
 
-async function replayRequest(id: string, tabId: number) {
+async function replayRequest(id: string) {
   const req = await getRequest(id);
   if (!req) return { error: 'Requisição não encontrada.' };
 
   try {
-    const lastReplay = await replayInTab(tabId, req);
+    const value = await executeReplay(buildReplayInit(req));
+    const truncated = truncateBody(value.responseBody);
+    const lastReplay: ReplayResult = {
+      replayedAt: Date.now(),
+      durationMs: value.durationMs,
+      status: value.status,
+      statusText: value.statusText,
+      responseHeaders: value.responseHeaders,
+      responseBody: truncated.body,
+      responseTruncated: truncated.truncated,
+    };
     const updated = await updateRequest(id, { lastReplay });
     return { request: updated, lastReplay };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     return { error: `Falha ao repetir: ${message}` };
   }
-}
-
-async function replayInTab(tabId: number, req: ClonedRequest): Promise<ReplayResult> {
-  await injectIntoTab(tabId, true);
-  const payload = buildReplayInit(req);
-  let response: { result?: PageReplayResultPayload; error?: string } | undefined;
-  try {
-    response = (await browser.tabs.sendMessage(
-      tabId,
-      { type: 'REPLAY_IN_PAGE', payload },
-      { frameId: 0 },
-    )) as { result?: PageReplayResultPayload; error?: string } | undefined;
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    if (/Receiving end does not exist/i.test(message)) {
-      throw new Error('Não foi possível falar com a página. Recarregue a aba e tente de novo.');
-    }
-    throw new Error(
-      message || 'Não foi possível falar com a página. Recarregue a aba e tente de novo.',
-    );
-  }
-
-  if (response?.error) throw new Error(response.error);
-  const value = response?.result;
-  if (!value) throw new Error('a página não retornou resultado');
-
-  const truncated = truncateBody(value.responseBody || null);
-  return {
-    replayedAt: Date.now(),
-    durationMs: value.durationMs,
-    status: value.status,
-    statusText: value.statusText,
-    responseHeaders: value.responseHeaders,
-    responseBody: truncated.body,
-    responseTruncated: truncated.truncated,
-  };
 }
