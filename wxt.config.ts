@@ -12,6 +12,7 @@ export default defineConfig({
       'scripting',
       'activeTab',
       'tabs',
+      'windows',
       'webNavigation',
     ],
     optional_host_permissions: ['*://*/*'],

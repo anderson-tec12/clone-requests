@@ -2,6 +2,10 @@ import { browser } from 'wxt/browser';
 import { recordingBadgeText } from '../lib/badge';
 import { truncateBody } from '../lib/body';
 import { buildClonedRequest } from '../lib/clone';
+import {
+  findFloatingWindowId,
+  floatingCreateOptions,
+} from '../lib/floatingWindow';
 import { matchesAnyFilter } from '../lib/matchUrl';
 import { isRestrictedUrl } from '../lib/origin';
 import { buildReplayInit, executeReplay } from '../lib/replay';
@@ -111,9 +115,26 @@ async function handleMessage(
       return replayRequest(message.id, message.draft);
     case 'CAPTURED':
       return captureFromTab(message.payload, sender);
+    case 'OPEN_FLOATING_WINDOW':
+      return openFloatingWindow();
     default:
       return { error: 'Mensagem desconhecida' };
   }
+}
+
+async function openFloatingWindow() {
+  const panelUrl = browser.runtime.getURL('/sidepanel.html');
+  const windows = await browser.windows.getAll({
+    populate: true,
+    windowTypes: ['popup'],
+  });
+  const existingId = findFloatingWindowId(windows, panelUrl);
+  if (existingId != null) {
+    await browser.windows.update(existingId, { focused: true });
+    return { ok: true, windowId: existingId };
+  }
+  const created = await browser.windows.create(floatingCreateOptions(panelUrl));
+  return { ok: true, windowId: created?.id ?? null };
 }
 
 async function startRecording(tabId: number) {

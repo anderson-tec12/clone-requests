@@ -58,6 +58,7 @@ export type ExtensionMessage =
   | { type: 'CLEAR_REQUESTS' }
   | { type: 'REPLAY'; id: string; draft?: ReplayDraftPayload }
   | { type: 'CAPTURED'; payload: CapturedPayload }
-  | { type: 'GET_TAB_CONFIG' };
+  | { type: 'GET_TAB_CONFIG' }
+  | { type: 'OPEN_FLOATING_WINDOW' };
 
 export const MESSAGE_SOURCE = 'clone-requests';

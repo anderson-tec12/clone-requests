@@ -15,13 +15,14 @@ import {
 } from '../../lib/exportJson';
 import { formatBody, formatTime, pathFromUrl } from '../../lib/format';
 import { isValidMatchPattern } from '../../lib/matchUrl';
-import { isRestrictedUrl, originPatternFromUrl } from '../../lib/origin';
+import { originPatternFromUrl } from '../../lib/origin';
 import { filenameForHttp, toRestClientHttp } from '../../lib/restClient';
 import {
   filterRequests,
   type RequestListFilters,
   type StatusClass,
 } from '../../lib/search';
+import { selectTargetTab } from '../../lib/targetTab';
 import type { ClonedRequest } from '../../lib/types';
 
 type BackgroundState = {
@@ -40,6 +41,7 @@ type PanelState = BackgroundState & {
 };
 
 const recordBtn = document.querySelector('#record-btn') as HTMLButtonElement;
+const popoutBtn = document.querySelector('#popout-btn') as HTMLButtonElement;
 const tabLabel = document.querySelector('#tab-label') as HTMLElement;
 const statusEl = document.querySelector('#status') as HTMLElement;
 const filtersToggle = document.querySelector('#filters-toggle') as HTMLButtonElement;
@@ -76,8 +78,10 @@ const EXAMPLE_FILTER = 'https://api.exemplo.com/*';
 void boot();
 
 async function boot() {
+  await hidePopoutIfFloating();
   await refresh();
   recordBtn.addEventListener('click', () => void toggleRecording());
+  popoutBtn.addEventListener('click', () => void openFloatingWindow());
   filtersToggle.addEventListener('click', () => {
     filtersPanel.hidden = !filtersPanel.hidden;
   });
@@ -117,24 +121,57 @@ async function boot() {
   });
 }
 
+async function hidePopoutIfFloating() {
+  try {
+    const current = await browser.windows.getCurrent();
+    if (current.type === 'popup') {
+      popoutBtn.hidden = true;
+    }
+  } catch {
+    // side panel / contexts sem windows.getCurrent
+  }
+}
+
+async function openFloatingWindow() {
+  await browser.runtime.sendMessage({ type: 'OPEN_FLOATING_WINDOW' });
+}
+
+async function resolveTargetTab() {
+  try {
+    const win = await browser.windows.getLastFocused({
+      windowTypes: ['normal'],
+    });
+    if (win.id == null) return null;
+    const tabs = await browser.tabs.query({ windowId: win.id });
+    return selectTargetTab({ id: win.id }, tabs);
+  } catch {
+    const tabs = await browser.tabs.query({
+      active: true,
+      lastFocusedWindow: true,
+    });
+    const tab = tabs[0];
+    if (!tab) return null;
+    return selectTargetTab({ id: tab.windowId ?? 0 }, [
+      {
+        id: tab.id,
+        url: tab.url,
+        title: tab.title,
+        active: true,
+      },
+    ]);
+  }
+}
+
 async function refresh() {
-  const [payload, tabs] = await Promise.all([
+  const [payload, tab] = await Promise.all([
     browser.runtime.sendMessage({ type: 'GET_STATE' }) as Promise<BackgroundState>,
-    browser.tabs.query({ active: true, lastFocusedWindow: true }),
+    resolveTargetTab(),
   ]);
-  const tab = tabs[0];
   state = {
     filters: payload.filters ?? [],
     requests: payload.requests ?? [],
     recordingTabIds: payload.recordingTabIds ?? [],
-    tab: tab
-      ? {
-          id: tab.id ?? null,
-          url: tab.url ?? '',
-          title: tab.title ?? '',
-          restricted: isRestrictedUrl(tab.url),
-        }
-      : null,
+    tab,
   };
   if (selectedId && !state.requests.some((item) => item.id === selectedId)) {
     selectedId = null;

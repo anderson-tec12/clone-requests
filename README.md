@@ -45,7 +45,7 @@ flowchart LR
 4. Clique em **Carregar sem compactação**.
 5. Selecione a pasta `.output/chrome-mv3`.
 
-O ícone da extensão abre o **painel lateral**.
+O ícone da extensão abre o **painel lateral**. No header do painel, **Abrir em janela** destaca a mesma UI numa janela flutuante (arrastável para outro monitor). Se a janela já existir, o botão só a foca.
 
 ## Como usar
 
