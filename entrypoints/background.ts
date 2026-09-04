@@ -1,9 +1,10 @@
 import { browser } from 'wxt/browser';
+import { recordingBadgeText } from '../lib/badge';
+import { truncateBody } from '../lib/body';
 import { buildClonedRequest } from '../lib/clone';
 import { matchesAnyFilter } from '../lib/matchUrl';
-import { buildReplayInit, executeReplay } from '../lib/replay';
 import { isRestrictedUrl } from '../lib/origin';
-import { truncateBody } from '../lib/body';
+import { buildReplayInit, executeReplay } from '../lib/replay';
 import {
   getFilters,
   getRecordingTabIds,
@@ -32,13 +33,16 @@ export default defineBackground(() => {
 
   browser.webNavigation.onCommitted.addListener((details) => {
     if (!recordingTabs.has(details.tabId)) return;
-    void injectIntoTab(details.tabId);
+    void injectIntoTab(details.tabId).then((ok) => {
+      if (ok) void sendConfig(details.tabId, true);
+    });
   });
 
   browser.tabs.onRemoved.addListener((tabId) => {
     if (!recordingTabs.has(tabId)) return;
     recordingTabs.delete(tabId);
     void persistRecordingTabs();
+    void updateRecordingBadge();
   });
 });
 
@@ -46,10 +50,23 @@ async function restoreRecordingTabs() {
   const ids = await getRecordingTabIds();
   recordingTabs.clear();
   for (const id of ids) recordingTabs.add(id);
+  await updateRecordingBadge();
+  for (const tabId of ids) {
+    const ok = await injectIntoTab(tabId);
+    if (ok) await sendConfig(tabId, true);
+  }
 }
 
 async function persistRecordingTabs() {
   await setRecordingTabIds([...recordingTabs]);
+}
+
+async function updateRecordingBadge() {
+  const text = recordingBadgeText(recordingTabs.size);
+  await browser.action.setBadgeText({ text });
+  if (text) {
+    await browser.action.setBadgeBackgroundColor({ color: '#e23d4c' });
+  }
 }
 
 async function handleMessage(
@@ -91,7 +108,7 @@ async function handleMessage(
       await clearRequests();
       return { ok: true };
     case 'REPLAY':
-      return replayRequest(message.id);
+      return replayRequest(message.id, message.draft);
     case 'CAPTURED':
       return captureFromTab(message.payload, sender);
     default:
@@ -110,9 +127,17 @@ async function startRecording(tabId: number) {
     return { error: 'Não é possível gravar nesta página.' };
   }
 
+  const injected = await injectIntoTab(tabId);
+  if (!injected) {
+    return {
+      error:
+        'Não foi possível injetar o interceptor nesta página. Recarregue a aba e tente de novo.',
+    };
+  }
+
   recordingTabs.add(tabId);
   await persistRecordingTabs();
-  await injectIntoTab(tabId);
+  await updateRecordingBadge();
   await sendConfig(tabId, true);
   return { ok: true, recordingTabIds: [...recordingTabs] };
 }
@@ -120,11 +145,12 @@ async function startRecording(tabId: number) {
 async function stopRecording(tabId: number) {
   recordingTabs.delete(tabId);
   await persistRecordingTabs();
+  await updateRecordingBadge();
   await sendConfig(tabId, false);
   return { ok: true, recordingTabIds: [...recordingTabs] };
 }
 
-async function injectIntoTab(tabId: number) {
+async function injectIntoTab(tabId: number): Promise<boolean> {
   try {
     await browser.scripting.executeScript({
       target: { tabId, allFrames: true },
@@ -138,8 +164,10 @@ async function injectIntoTab(tabId: number) {
       world: 'ISOLATED',
       injectImmediately: true,
     });
+    return true;
   } catch (error) {
     console.warn('clone-requests: falha ao injetar scripts', error);
+    return false;
   }
 }
 
@@ -181,12 +209,22 @@ async function captureFromTab(
   return { ok: true, id: item.id };
 }
 
-async function replayRequest(id: string) {
+async function replayRequest(
+  id: string,
+  draft?: {
+    method: string;
+    url: string;
+    requestHeaders: Record<string, string>;
+    requestBody: string | null;
+  },
+) {
   const req = await getRequest(id);
   if (!req) return { error: 'Requisição não encontrada.' };
 
+  const source = draft ?? req;
+
   try {
-    const value = await executeReplay(buildReplayInit(req));
+    const value = await executeReplay(buildReplayInit(source));
     const truncated = truncateBody(value.responseBody);
     const lastReplay: ReplayResult = {
       replayedAt: Date.now(),

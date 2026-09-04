@@ -5,7 +5,7 @@ export default defineConfig({
     name: 'clone-requests',
     description:
       'Clona requisições de API (URL, headers, query, payload e resposta) para consultar e repetir.',
-    version: '0.1.0',
+    version: '1.1.0',
     permissions: [
       'sidePanel',
       'storage',

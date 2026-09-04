@@ -1,6 +1,6 @@
 # clone-requests
 
-Extensão Chrome (Manifest V3) para **clonar requisições de API**: guarda URL, headers, query params, payload e resposta, e permite consultar, repetir, copiar cURL e exportar JSON.
+Extensão Chrome (Manifest V3) para **clonar requisições de API**: guarda URL, headers, query params, payload e resposta, e permite consultar, repetir, copiar cURL, exportar JSON e baixar `.http` (REST Client).
 
 ![Painel com lista de GET/POST e detalhe do payload](docs/screenshots/lista-e-detalhe.png)
 
@@ -59,7 +59,7 @@ O ícone da extensão abre o **painel lateral**.
 ![Painel gravando com o botão Parar](docs/screenshots/gravando.png)
 
 4. Dispare as chamadas de API. Só entram requests `fetch`/`XHR` que casam com o filtro.
-5. Consulte a lista, abra o detalhe e use **Repetir**, **Copiar cURL**, **Baixar JSON** ou **Excluir**. Em **Repetir**, aceite a permissão da origem da API se o Chrome pedir. Na lista, o botão **JSON** baixa só aquela requisição; **Exportar todos** no rodapé gera um único `.json` com o histórico.
+5. Consulte a lista, abra o detalhe e use **Repetir**, **Copiar cURL**, **Baixar .http**, **Baixar JSON** ou **Excluir**. Em **Repetir**, aceite a permissão da origem da API se o Chrome pedir. Na lista, os botões **HTTP** e **JSON** baixam só aquela requisição (`.http` no formato do [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client); JSON completo); **Exportar todos** no rodapé gera um único `.json` com o histórico.
 
 ![Lista de requests e detalhe com payload e resposta](docs/screenshots/lista-e-detalhe.png)
 

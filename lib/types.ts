@@ -39,6 +39,13 @@ export type CapturedPayload = {
   durationMs: number;
 };
 
+export type ReplayDraftPayload = {
+  method: string;
+  url: string;
+  requestHeaders: Record<string, string>;
+  requestBody: string | null;
+};
+
 export type ExtensionMessage =
   | { type: 'GET_STATE' }
   | { type: 'START_RECORDING'; tabId: number }
@@ -49,7 +56,7 @@ export type ExtensionMessage =
   | { type: 'GET_REQUEST'; id: string }
   | { type: 'DELETE_REQUEST'; id: string }
   | { type: 'CLEAR_REQUESTS' }
-  | { type: 'REPLAY'; id: string }
+  | { type: 'REPLAY'; id: string; draft?: ReplayDraftPayload }
   | { type: 'CAPTURED'; payload: CapturedPayload }
   | { type: 'GET_TAB_CONFIG' };
 

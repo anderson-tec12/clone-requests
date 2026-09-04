@@ -39,6 +39,32 @@ body {
   border-bottom: 1px solid var(--line);
 }
 
+.search {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  border-radius: 999px;
+}
+
+.chip.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
 .top {
   display: flex;
   align-items: center;
@@ -219,7 +245,7 @@ input {
 
 .request-list li {
   display: grid;
-  grid-template-columns: 52px 40px 1fr auto auto;
+  grid-template-columns: 52px 40px 1fr auto auto auto;
   gap: 8px;
   align-items: center;
   padding: 8px 12px;
@@ -228,7 +254,7 @@ input {
   font-size: 12px;
 }
 
-.request-list .json-btn {
+.request-list .export-btn {
   padding: 2px 6px;
   font-size: 10px;
   letter-spacing: 0.04em;
@@ -300,6 +326,25 @@ pre {
   font-size: 11px;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.kv textarea,
+.kv input {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 8px;
+  background: #0c0f16;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 11px;
+  resize: vertical;
+}
+
+.kv input {
+  resize: none;
 }
 
 .footer {

@@ -45,7 +45,23 @@
     </section>
 
     <section class="search">
-      <input id="search-input" type="search" placeholder="Buscar URL, método ou status" />
+      <input
+        id="search-input"
+        type="search"
+        placeholder="Buscar URL, método, status, headers ou body"
+      />
+      <div class="chips" id="method-chips" aria-label="Filtrar por método">
+        <button type="button" class="chip" data-method="GET">GET</button>
+        <button type="button" class="chip" data-method="POST">POST</button>
+        <button type="button" class="chip" data-method="PUT">PUT</button>
+        <button type="button" class="chip" data-method="PATCH">PATCH</button>
+        <button type="button" class="chip" data-method="DELETE">DELETE</button>
+      </div>
+      <div class="chips" id="status-chips" aria-label="Filtrar por status">
+        <button type="button" class="chip" data-status="2xx">2xx</button>
+        <button type="button" class="chip" data-status="4xx">4xx</button>
+        <button type="button" class="chip" data-status="5xx">5xx</button>
+      </div>
     </section>
 
     <section class="layout">
