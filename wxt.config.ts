@@ -5,7 +5,7 @@ export default defineConfig({
   manifest: {
     name: 'clone-requests',
     description:
-      'Clona requisições de API (URL, headers, query, payload e resposta) para consultar e repetir.',
+      'Grave, consulte e repita requisições de API (fetch e XHR): URL, headers, payload, cURL e arquivo .http.',
     version: '1.2.0',
     permissions: [
       'storage',

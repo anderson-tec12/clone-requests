@@ -37,7 +37,7 @@ const shots = [
     src: path.join(fixturesDir, 'lista-e-detalhe.html'),
     out: path.join(outDir, 'lista-e-detalhe.png'),
     width: 420,
-    height: 980,
+    height: 1100,
   },
   {
     src: path.join(root, 'test-page', 'index.html'),

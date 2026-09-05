@@ -27,7 +27,19 @@
     </section>
 
     <section class="search">
-      <input type="search" placeholder="Buscar URL, método ou status" />
+      <input type="search" placeholder="Buscar URL, método, status, headers ou body" />
+      <div class="chips" aria-label="Filtrar por método">
+        <button type="button" class="chip">GET</button>
+        <button type="button" class="chip">POST</button>
+        <button type="button" class="chip">PUT</button>
+        <button type="button" class="chip">PATCH</button>
+        <button type="button" class="chip">DELETE</button>
+      </div>
+      <div class="chips" aria-label="Filtrar por status">
+        <button type="button" class="chip">2xx</button>
+        <button type="button" class="chip">4xx</button>
+        <button type="button" class="chip">5xx</button>
+      </div>
     </section>
 
     <section class="layout">

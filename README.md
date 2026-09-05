@@ -1,12 +1,21 @@
 # clone-requests
 
-Extensão Chrome (Manifest V3) para **clonar requisições de API**: guarda URL, headers, query params, payload e resposta, e permite consultar, repetir, copiar cURL, exportar JSON e baixar `.http` (REST Client).
+Extensão Chrome (Manifest V3) para **clonar requisições de API**: guarda URL, headers, query params, payload e resposta, e permite consultar, editar, repetir, copiar cURL, exportar JSON e baixar `.http` (REST Client).
 
-![Painel com lista de GET/POST e detalhe do payload](docs/screenshots/lista-e-detalhe.png)
+![clone-requests — janela flutuante clonando requests de API](docs/screenshots/hero.png)
+
+## Recursos
+
+- Grava `fetch` e `XMLHttpRequest` com padrões de URL (match pattern do Chrome).
+- Janela flutuante: o ícone da extensão abre ou foca a UI; **Abrir em aba** / **Abrir em janela** alterna o modo sem recarregar.
+- Lista agrupada por dia (**Hoje** começa aberto); filtro **Ver** por domínio; chips de método e status; busca em URL, headers, query e body.
+- Detalhe editável (método, URL, query, headers, payload) com **Restaurar original**.
+- **Repetir** via axios no service worker: grava um clone novo com prefixo `R` (ex.: `R POST`) e mostra um toast de confirmação.
+- Copiar cURL, baixar `.http` ([REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client)) e JSON; **Exportar filtrados** / **Exportar todos**.
 
 ## Como funciona
 
-Ao clicar em **Gravar**, a extensão injeta um interceptor na página (mundo MAIN). Esse hook envolve `fetch` e `XMLHttpRequest`. Cada chamada cuja URL casa com um filtro cadastrado é serializada e enviada ao service worker, que persiste o clone no IndexedDB (com data/hora de armazenamento). A janela flutuante lista, busca e inspeciona o histórico. **Repetir** dispara a request pela extensão (axios no service worker) e **grava um clone novo** na lista com a resposta dessa execução — o original permanece intacto. Itens gerados por **Repetir** aparecem na lista como `R GET`, `R POST`, etc. Ao concluir com sucesso, a janela mostra um toast (**Repetição do request realizada.**). O axios não passa pelo interceptor da página, então um clique gera um item, não dois.
+Ao clicar em **Gravar**, a extensão injeta um interceptor na página (mundo MAIN). Esse hook envolve `fetch` e `XMLHttpRequest`. Cada chamada cuja URL casa com um filtro cadastrado é serializada e enviada ao service worker, que persiste o clone no IndexedDB (com data/hora de armazenamento). A janela flutuante lista, busca e inspeciona o histórico. No detalhe você edita um rascunho: isso **não** altera o clone original. **Repetir** dispara a request pela extensão (axios no service worker) e **grava um clone novo** na lista com a resposta dessa execução — o original permanece intacto. Itens gerados por **Repetir** aparecem como `R GET`, `R POST`, etc. Ao concluir com sucesso, a janela mostra um toast (**Repetição do request realizada.**). O axios não passa pelo interceptor da página, então um clique gera um item, não dois.
 
 ```mermaid
 flowchart LR
@@ -59,9 +68,9 @@ O ícone da extensão abre ou foca a **janela flutuante** (ou a aba, se você j�
 ![Painel gravando com o botão Parar](docs/screenshots/gravando.png)
 
 4. Dispare as chamadas de API. Só entram requests `fetch`/`XHR` que casam com o filtro.
-5. Consulte a lista agrupada por dia de gravação (**Hoje** começa aberto; clique em **Ontem** ou numa data para revelar os clones daquele dia). Cada linha mostra a hora; o detalhe traz data e hora completas. Com **2+ filtros** de captura, use **Ver** para restringir por domínio. Clique numa linha para expandir o detalhe em accordion e use **Repetir**, **Copiar cURL**, **Baixar .http**, **Baixar JSON** ou **Excluir**. Em **Repetir**, aceite a permissão da origem da API se o Chrome pedir — a execução vira um **novo item** no topo da lista marcado com `R` no método (ex.: `R POST`), o original não muda, e um toast confirma a repetição. Na lista, os botões **HTTP** e **JSON** baixam só aquela requisição (`.http` no formato do [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client); JSON completo); **Exportar todos** no rodapé gera um único `.json` com o histórico.
+5. Consulte a lista agrupada por dia de gravação (**Hoje** começa aberto; clique em **Ontem** ou numa data para revelar os clones daquele dia). Cada linha mostra a hora; o detalhe traz data e hora completas. Com **2+ filtros** de captura, use **Ver** para restringir por domínio. Use os chips de método/status e a busca (URL, headers, body) para afinar a lista. Clique numa linha para expandir o detalhe em accordion: edite método, URL, query, headers e payload; **Restaurar original** desfaz o rascunho. Use **Repetir**, **Copiar cURL**, **Baixar .http**, **Baixar JSON** ou **Excluir**. Em **Repetir**, aceite a permissão da origem da API se o Chrome pedir — a execução vira um **novo item** no topo da lista marcado com `R` no método (ex.: `R POST`), o original não muda, e um toast confirma a repetição. Na lista, os botões **HTTP** e **JSON** baixam só aquela requisição (`.http` no formato do [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client); JSON completo); **Exportar filtrados** / **Exportar todos** no rodapé gera um único `.json` com o resultado atual da lista.
 
-![Lista de requests e detalhe com payload e resposta](docs/screenshots/lista-e-detalhe.png)
+![Lista de requests e detalhe editável com toast de replay](docs/screenshots/lista-e-detalhe.png)
 
 Painel vazio, antes de gravar:
 
@@ -109,7 +118,7 @@ npm run dev
 
 O `npm run dev` gera a extensão em `deploy/chrome-mv3` com recarga automática.
 
-Para regenerar os prints deste README:
+Para regenerar os prints deste README (a capa `hero.png` é ilustração e não sai deste script):
 
 ```bash
 npm install --no-save playwright

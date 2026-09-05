@@ -1,6 +1,6 @@
 {
   "name": "clone-requests",
-  "description": "Extensão Chrome para clonar, consultar e repetir requisições de API",
+  "description": "Grave, consulte e repita requisições de API (fetch e XHR): URL, headers, payload, cURL e arquivo .http.",
   "private": true,
   "version": "1.2.0",
   "type": "module",

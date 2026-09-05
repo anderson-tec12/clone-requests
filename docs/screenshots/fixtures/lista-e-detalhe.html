@@ -103,25 +103,39 @@
                 <p class="muted">201 Created · 184 ms · 05/09/2026, 20:12:08</p>
                 <div class="actions">
                   <button type="button">Repetir</button>
+                  <button type="button">Restaurar original</button>
                   <button type="button">Copiar cURL</button>
+                  <button type="button">Baixar .http</button>
                   <button type="button">Baixar JSON</button>
                   <button type="button" class="danger ghost">Excluir</button>
                 </div>
                 <section class="kv">
+                  <h3>Método</h3>
+                  <input type="text" value="POST" autocomplete="off" />
+                </section>
+                <section class="kv">
+                  <h3>URL</h3>
+                  <input
+                    type="text"
+                    value="https://jsonplaceholder.typicode.com/posts"
+                    autocomplete="off"
+                  />
+                </section>
+                <section class="kv">
                   <h3>Query params</h3>
-                  <pre>(nenhum)</pre>
+                  <textarea rows="3"></textarea>
                 </section>
                 <section class="kv">
                   <h3>Headers da requisição</h3>
-                  <pre>content-type: application/json</pre>
+                  <textarea rows="3">content-type: application/json</textarea>
                 </section>
                 <section class="kv">
                   <h3>Payload</h3>
-                  <pre>{
+                  <textarea rows="6">{
   "title": "clone-requests",
   "body": "teste",
   "userId": 1
-}</pre>
+}</textarea>
                 </section>
                 <section class="kv">
                   <h3>Resposta</h3>
@@ -153,5 +167,7 @@
       <button type="button">Exportar filtrados (3)</button>
       <button type="button" class="danger ghost">Limpar histórico</button>
     </footer>
+
+    <div class="toast" role="status">Repetição do request realizada.</div>
   </body>
 </html>
