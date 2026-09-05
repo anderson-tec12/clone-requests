@@ -3,7 +3,7 @@ import { isExtensionPageUrl, selectTargetTab } from './targetTab';
 
 describe('isExtensionPageUrl', () => {
   it('detects chrome-extension and similar pages', () => {
-    expect(isExtensionPageUrl('chrome-extension://abc/sidepanel.html')).toBe(true);
+    expect(isExtensionPageUrl('chrome-extension://abc/ui.html')).toBe(true);
     expect(isExtensionPageUrl('chrome://extensions')).toBe(true);
     expect(isExtensionPageUrl('https://api.exemplo.com/users')).toBe(false);
     expect(isExtensionPageUrl(undefined)).toBe(true);
@@ -37,7 +37,7 @@ describe('selectTargetTab', () => {
       [
         {
           id: 3,
-          url: 'chrome-extension://id/sidepanel.html',
+          url: 'chrome-extension://id/ui.html',
           title: 'clone-requests',
           active: true,
         },

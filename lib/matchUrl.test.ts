@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   isValidMatchPattern,
+  labelForMatchPattern,
   matchesAnyFilter,
   matchUrl,
 } from './matchUrl';
@@ -85,6 +86,24 @@ describe('matchUrl', () => {
         'https://main.idsecure.com.br/*',
       ),
     ).toBe(true);
+  });
+});
+
+describe('labelForMatchPattern', () => {
+  it('returns the host from a host-and-path pattern', () => {
+    expect(labelForMatchPattern('https://api.foo.com/*')).toBe('api.foo.com');
+  });
+
+  it('returns the original pattern for <all_urls>', () => {
+    expect(labelForMatchPattern('<all_urls>')).toBe('<all_urls>');
+  });
+
+  it('returns the original pattern when host is missing', () => {
+    expect(labelForMatchPattern('file:///foo/*')).toBe('file:///foo/*');
+  });
+
+  it('returns the original pattern when it cannot be parsed', () => {
+    expect(labelForMatchPattern('not-a-pattern')).toBe('not-a-pattern');
   });
 });
 

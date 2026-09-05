@@ -13,9 +13,6 @@
         <span id="tab-label" class="muted">Nenhuma aba</span>
       </div>
       <div class="top-actions">
-        <button id="popout-btn" type="button" class="ghost" title="Abrir em janela flutuante">
-          Abrir em janela
-        </button>
         <button id="record-btn" type="button" class="record">Gravar</button>
       </div>
     </header>
@@ -50,6 +47,12 @@
     </section>
 
     <section class="search">
+      <label id="view-filter-wrap" class="view-filter" hidden>
+        <span>Ver</span>
+        <select id="view-filter" aria-label="Filtrar lista por domínio">
+          <option value="">Todos</option>
+        </select>
+      </label>
       <input
         id="search-input"
         type="search"
@@ -71,15 +74,14 @@
 
     <section class="layout">
       <ul id="request-list" class="request-list"></ul>
-      <article id="detail" class="detail empty">
-        <p class="muted">Selecione uma requisição para ver os detalhes.</p>
-      </article>
     </section>
 
     <footer class="footer">
       <button id="export-all-btn" type="button" disabled>Exportar todos</button>
       <button id="clear-btn" type="button" class="danger ghost">Limpar histórico</button>
     </footer>
+
+    <div id="toast" class="toast" role="status" hidden></div>
 
     <script type="module" src="./main.ts"></script>
   </body>

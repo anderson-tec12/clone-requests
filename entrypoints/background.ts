@@ -1,7 +1,6 @@
 import { browser } from 'wxt/browser';
 import { recordingBadgeText } from '../lib/badge';
-import { truncateBody } from '../lib/body';
-import { buildClonedRequest } from '../lib/clone';
+import { buildClonedRequest, clonedRequestFromReplay } from '../lib/clone';
 import {
   findFloatingWindowId,
   floatingCreateOptions,
@@ -21,15 +20,17 @@ import {
   getRequest,
   listRequests,
   saveRequest,
-  updateRequest,
 } from '../lib/storage';
-import type { CapturedPayload, ExtensionMessage, ReplayResult } from '../lib/types';
+import type { CapturedPayload, ExtensionMessage } from '../lib/types';
 
 const recordingTabs = new Set<number>();
 
 export default defineBackground(() => {
   void restoreRecordingTabs();
-  void browser.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
+
+  browser.action.onClicked.addListener(() => {
+    void openFloatingWindow();
+  });
 
   browser.runtime.onMessage.addListener((message, sender) => {
     return handleMessage(message as ExtensionMessage, sender);
@@ -115,15 +116,13 @@ async function handleMessage(
       return replayRequest(message.id, message.draft);
     case 'CAPTURED':
       return captureFromTab(message.payload, sender);
-    case 'OPEN_FLOATING_WINDOW':
-      return openFloatingWindow();
     default:
       return { error: 'Mensagem desconhecida' };
   }
 }
 
 async function openFloatingWindow() {
-  const panelUrl = browser.runtime.getURL('/sidepanel.html');
+  const panelUrl = browser.runtime.getURL('/ui.html');
   const windows = await browser.windows.getAll({
     populate: true,
     windowTypes: ['popup'],
@@ -246,18 +245,10 @@ async function replayRequest(
 
   try {
     const value = await executeReplay(buildReplayInit(source));
-    const truncated = truncateBody(value.responseBody);
-    const lastReplay: ReplayResult = {
-      replayedAt: Date.now(),
-      durationMs: value.durationMs,
-      status: value.status,
-      statusText: value.statusText,
-      responseHeaders: value.responseHeaders,
-      responseBody: truncated.body,
-      responseTruncated: truncated.truncated,
-    };
-    const updated = await updateRequest(id, { lastReplay });
-    return { request: updated, lastReplay };
+    const item = clonedRequestFromReplay(req, source, value);
+    await saveRequest(item);
+    void browser.runtime.sendMessage({ type: 'REQUESTS_UPDATED' }).catch(() => undefined);
+    return { request: item };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     return { error: `Falha ao repetir: ${message}` };

@@ -1,3 +1,4 @@
+import { matchUrl } from './matchUrl';
 import type { ClonedRequest } from './types';
 
 export type StatusClass = '2xx' | '4xx' | '5xx';
@@ -5,6 +6,7 @@ export type StatusClass = '2xx' | '4xx' | '5xx';
 export type RequestListFilters = {
   methods?: string[];
   statusClasses?: StatusClass[];
+  urlPattern?: string; // vazio = todos
 };
 
 export function filterRequests(
@@ -15,8 +17,12 @@ export function filterRequests(
   const needle = query.trim().toLowerCase();
   const methods = (filters.methods ?? []).map((m) => m.toUpperCase());
   const statusClasses = filters.statusClasses ?? [];
+  const urlPattern = filters.urlPattern?.trim() ?? '';
 
   return items.filter((item) => {
+    if (urlPattern && !matchUrl(item.url, urlPattern)) {
+      return false;
+    }
     if (methods.length > 0 && !methods.includes(item.method.toUpperCase())) {
       return false;
     }

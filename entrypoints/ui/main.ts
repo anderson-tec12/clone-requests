@@ -13,8 +13,16 @@ import {
   requestToJson,
   requestsToJson,
 } from '../../lib/exportJson';
-import { formatBody, formatTime, pathFromUrl } from '../../lib/format';
-import { isValidMatchPattern } from '../../lib/matchUrl';
+import {
+  dayKeyFromTimestamp,
+  formatBody,
+  formatClock,
+  formatMethodLabel,
+  formatTime,
+  shortenDisplayUrl,
+} from '../../lib/format';
+import { groupRequestsByDay } from '../../lib/groupByDay';
+import { isValidMatchPattern, labelForMatchPattern } from '../../lib/matchUrl';
 import { originPatternFromUrl } from '../../lib/origin';
 import { filenameForHttp, toRestClientHttp } from '../../lib/restClient';
 import {
@@ -41,9 +49,9 @@ type PanelState = BackgroundState & {
 };
 
 const recordBtn = document.querySelector('#record-btn') as HTMLButtonElement;
-const popoutBtn = document.querySelector('#popout-btn') as HTMLButtonElement;
 const tabLabel = document.querySelector('#tab-label') as HTMLElement;
 const statusEl = document.querySelector('#status') as HTMLElement;
+const toastEl = document.querySelector('#toast') as HTMLElement;
 const filtersToggle = document.querySelector('#filters-toggle') as HTMLButtonElement;
 const filtersPanel = document.querySelector('#filters-panel') as HTMLElement;
 const filterCount = document.querySelector('#filter-count') as HTMLElement;
@@ -53,11 +61,12 @@ const filterHint = document.querySelector('#filter-hint') as HTMLElement;
 const filterExample = document.querySelector('#filter-example') as HTMLElement;
 const filterExampleBtn = document.querySelector('#filter-example-btn') as HTMLButtonElement;
 const filterList = document.querySelector('#filter-list') as HTMLUListElement;
+const viewFilterWrap = document.querySelector('#view-filter-wrap') as HTMLElement;
+const viewFilter = document.querySelector('#view-filter') as HTMLSelectElement;
 const searchInput = document.querySelector('#search-input') as HTMLInputElement;
 const methodChips = document.querySelector('#method-chips') as HTMLElement;
 const statusChips = document.querySelector('#status-chips') as HTMLElement;
 const requestList = document.querySelector('#request-list') as HTMLUListElement;
-const detail = document.querySelector('#detail') as HTMLElement;
 const exportAllBtn = document.querySelector('#export-all-btn') as HTMLButtonElement;
 const clearBtn = document.querySelector('#clear-btn') as HTMLButtonElement;
 
@@ -71,17 +80,17 @@ let selectedId: string | null = null;
 let query = '';
 let listFilters: RequestListFilters = { methods: [], statusClasses: [] };
 let didFocusEmptyFilter = false;
+let toastTimer: ReturnType<typeof setTimeout> | null = null;
 const drafts = new Map<string, ReplayDraft>();
+const dayOpenState = new Map<string, boolean>();
 
 const EXAMPLE_FILTER = 'https://api.exemplo.com/*';
 
 void boot();
 
 async function boot() {
-  await hidePopoutIfFloating();
   await refresh();
   recordBtn.addEventListener('click', () => void toggleRecording());
-  popoutBtn.addEventListener('click', () => void openFloatingWindow());
   filtersToggle.addEventListener('click', () => {
     filtersPanel.hidden = !filtersPanel.hidden;
   });
@@ -92,6 +101,10 @@ async function boot() {
   filterExampleBtn.addEventListener('click', () => {
     filterInput.value = EXAMPLE_FILTER;
     filterInput.focus();
+  });
+  viewFilter.addEventListener('change', () => {
+    listFilters = { ...listFilters, urlPattern: viewFilter.value || undefined };
+    renderList();
   });
   searchInput.addEventListener('input', () => {
     query = searchInput.value;
@@ -119,21 +132,6 @@ async function boot() {
   browser.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
     if (tab.active && (changeInfo.url || changeInfo.title)) void refresh();
   });
-}
-
-async function hidePopoutIfFloating() {
-  try {
-    const current = await browser.windows.getCurrent();
-    if (current.type === 'popup') {
-      popoutBtn.hidden = true;
-    }
-  } catch {
-    // side panel / contexts sem windows.getCurrent
-  }
-}
-
-async function openFloatingWindow() {
-  await browser.runtime.sendMessage({ type: 'OPEN_FLOATING_WINDOW' });
 }
 
 async function resolveTargetTab() {
@@ -190,10 +188,48 @@ function render() {
   recordBtn.classList.toggle('on', recording);
   recordBtn.disabled = !tab?.id || tab.restricted;
   filterCount.textContent = `(${state.filters.length})`;
+  renderViewFilter();
   renderFilterChips();
   renderFilters();
   renderList();
-  renderDetail();
+}
+
+function renderViewFilter() {
+  const show = state.filters.length >= 2;
+  viewFilterWrap.hidden = !show;
+
+  if (
+    listFilters.urlPattern &&
+    !state.filters.includes(listFilters.urlPattern)
+  ) {
+    listFilters = { ...listFilters, urlPattern: undefined };
+  }
+
+  viewFilter.replaceChildren();
+  const allOption = document.createElement('option');
+  allOption.value = '';
+  allOption.textContent = 'Todos';
+  viewFilter.append(allOption);
+
+  const labels = state.filters.map((pattern) => labelForMatchPattern(pattern));
+  const labelCounts = new Map<string, number>();
+  for (const label of labels) {
+    labelCounts.set(label, (labelCounts.get(label) ?? 0) + 1);
+  }
+
+  for (const pattern of state.filters) {
+    const option = document.createElement('option');
+    option.value = pattern;
+    const label = labelForMatchPattern(pattern);
+    option.textContent =
+      (labelCounts.get(label) ?? 0) > 1 ? pattern : label;
+    viewFilter.append(option);
+  }
+
+  viewFilter.value = listFilters.urlPattern ?? '';
+  if (!show) {
+    listFilters = { ...listFilters, urlPattern: undefined };
+  }
 }
 
 function visibleRequests(): ClonedRequest[] {
@@ -265,6 +301,12 @@ function renderFilters() {
   }
 }
 
+function isDayOpen(dayKey: string): boolean {
+  const stored = dayOpenState.get(dayKey);
+  if (stored !== undefined) return stored;
+  return dayKey === dayKeyFromTimestamp(Date.now());
+}
+
 function renderList() {
   const items = visibleRequests();
   exportAllBtn.disabled = items.length === 0;
@@ -275,54 +317,103 @@ function renderList() {
   requestList.replaceChildren();
   if (items.length === 0) {
     const empty = document.createElement('li');
+    empty.className = 'empty-row';
     empty.textContent = state.requests.length === 0
       ? 'Nenhuma requisição clonada ainda.'
       : 'Nenhum resultado para a busca.';
-    empty.style.cursor = 'default';
-    empty.style.gridTemplateColumns = '1fr';
     requestList.append(empty);
     return;
   }
 
-  for (const item of items) {
-    const li = document.createElement('li');
-    li.classList.toggle('active', item.id === selectedId);
-    const method = document.createElement('span');
-    method.className = `method ${item.method}`;
-    method.textContent = item.method;
-    const status = document.createElement('span');
-    status.className = `status-code ${statusClass(item.status)}`;
-    status.textContent = String(item.status);
-    const path = document.createElement('span');
-    path.textContent = pathFromUrl(item.url);
-    path.title = item.url;
-    const time = document.createElement('span');
-    time.className = 'muted';
-    time.textContent = formatTime(item.capturedAt);
-    const httpBtn = document.createElement('button');
-    httpBtn.type = 'button';
-    httpBtn.className = 'export-btn';
-    httpBtn.textContent = 'HTTP';
-    httpBtn.addEventListener('click', (event) => {
+  for (const group of groupRequestsByDay(items)) {
+    const dayLi = document.createElement('li');
+    dayLi.className = 'day-group';
+    const open = isDayOpen(group.dayKey);
+
+    const header = document.createElement('button');
+    header.type = 'button';
+    header.className = 'day-header';
+    header.setAttribute('aria-expanded', open ? 'true' : 'false');
+    const chevron = document.createElement('span');
+    chevron.className = 'day-chevron';
+    chevron.textContent = open ? '▾' : '▸';
+    const label = document.createElement('span');
+    label.textContent = `${group.label} (${group.items.length})`;
+    header.append(chevron, label);
+    header.addEventListener('click', (event) => {
       event.stopPropagation();
-      downloadHttp(item);
-    });
-    const jsonBtn = document.createElement('button');
-    jsonBtn.type = 'button';
-    jsonBtn.className = 'export-btn';
-    jsonBtn.textContent = 'JSON';
-    jsonBtn.addEventListener('click', (event) => {
-      event.stopPropagation();
-      downloadRequest(item);
-    });
-    li.append(method, status, path, time, httpBtn, jsonBtn);
-    li.addEventListener('click', () => {
-      selectedId = item.id;
+      dayOpenState.set(group.dayKey, !open);
       renderList();
-      renderDetail();
     });
-    requestList.append(li);
+    dayLi.append(header);
+
+    if (open) {
+      const dayItems = document.createElement('ul');
+      dayItems.className = 'day-items';
+      for (const item of group.items) {
+        dayItems.append(renderRequestItem(item));
+      }
+      dayLi.append(dayItems);
+    }
+
+    requestList.append(dayLi);
   }
+}
+
+function renderRequestItem(item: ClonedRequest): HTMLLIElement {
+  const li = document.createElement('li');
+  const open = item.id === selectedId;
+  li.classList.toggle('active', open);
+
+  const row = document.createElement('div');
+  row.className = 'request-row';
+
+  const method = document.createElement('span');
+  method.className = `method ${item.method}`;
+  method.textContent = formatMethodLabel(item.method, item.fromReplay);
+  const status = document.createElement('span');
+  status.className = `status-code ${statusClass(item.status)}`;
+  status.textContent = String(item.status);
+  const path = document.createElement('span');
+  path.className = 'request-url';
+  path.textContent = shortenDisplayUrl(item.url);
+  path.title = item.url;
+  const time = document.createElement('span');
+  time.className = 'muted';
+  time.textContent = formatClock(item.capturedAt);
+  const httpBtn = document.createElement('button');
+  httpBtn.type = 'button';
+  httpBtn.className = 'export-btn';
+  httpBtn.textContent = 'HTTP';
+  httpBtn.addEventListener('click', (event) => {
+    event.stopPropagation();
+    downloadHttp(item);
+  });
+  const jsonBtn = document.createElement('button');
+  jsonBtn.type = 'button';
+  jsonBtn.className = 'export-btn';
+  jsonBtn.textContent = 'JSON';
+  jsonBtn.addEventListener('click', (event) => {
+    event.stopPropagation();
+    downloadRequest(item);
+  });
+  row.append(method, status, path, time, httpBtn, jsonBtn);
+  li.append(row);
+
+  if (open) {
+    const detail = document.createElement('div');
+    detail.className = 'request-detail';
+    fillDetail(detail, item);
+    li.append(detail);
+  }
+
+  li.addEventListener('click', (event) => {
+    const target = event.target as HTMLElement | null;
+    if (target?.closest('.request-detail')) return;
+    selectedId = selectedId === item.id ? null : item.id;
+    renderList();
+  });
+  return li;
 }
 
 function ensureDraft(item: ClonedRequest): ReplayDraft {
@@ -334,20 +425,8 @@ function ensureDraft(item: ClonedRequest): ReplayDraft {
   return draft;
 }
 
-function renderDetail() {
-  const item = state.requests.find((request) => request.id === selectedId);
-  if (!item) {
-    detail.classList.add('empty');
-    detail.replaceChildren();
-    const p = document.createElement('p');
-    p.className = 'muted';
-    p.textContent = 'Selecione uma requisição para ver os detalhes.';
-    detail.append(p);
-    return;
-  }
-
+function fillDetail(detail: HTMLElement, item: ClonedRequest) {
   const draft = ensureDraft(item);
-  detail.classList.remove('empty');
   detail.replaceChildren();
 
   const title = document.createElement('h2');
@@ -430,14 +509,6 @@ function renderDetail() {
     formatBody(item.responseBody) || '(vazia)',
   );
   appendKv(detail, 'Headers da resposta', prettyRecord(item.responseHeaders));
-
-  if (item.lastReplay) {
-    appendKv(
-      detail,
-      `Última execução (${item.lastReplay.status} ${item.lastReplay.statusText} · ${item.lastReplay.durationMs} ms)`,
-      formatBody(item.lastReplay.responseBody) || '(vazia)',
-    );
-  }
 }
 
 function parseQueryFromUrl(url: string): Record<string, string> {
@@ -456,7 +527,7 @@ function parseQueryFromUrl(url: string): Record<string, string> {
 function restoreDraft(item: ClonedRequest) {
   drafts.set(item.id, draftFromRequest(item));
   showStatus('Rascunho restaurado para a captura original.');
-  renderDetail();
+  renderList();
 }
 
 function actionButton(label: string, onClick: () => void, danger = false) {
@@ -504,6 +575,20 @@ function showStatus(message: string, error = false) {
   statusEl.hidden = !message;
   statusEl.textContent = message;
   statusEl.classList.toggle('error', error);
+}
+
+function showToast(message: string) {
+  if (toastTimer != null) {
+    clearTimeout(toastTimer);
+    toastTimer = null;
+  }
+  toastEl.hidden = false;
+  toastEl.textContent = message;
+  toastTimer = setTimeout(() => {
+    toastEl.hidden = true;
+    toastEl.textContent = '';
+    toastTimer = null;
+  }, 3000);
 }
 
 async function toggleRecording() {
@@ -610,7 +695,7 @@ async function replay(id: string) {
       showStatus(result.error, true);
       return;
     }
-    showStatus('Requisição repetida pela extensão.');
+    showToast('Repetição do request realizada.');
     await refresh();
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

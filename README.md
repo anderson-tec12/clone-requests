@@ -6,7 +6,7 @@ Extensão Chrome (Manifest V3) para **clonar requisições de API**: guarda URL,
 
 ## Como funciona
 
-Ao clicar em **Gravar**, a extensão injeta um interceptor na página (mundo MAIN). Esse hook envolve `fetch` e `XMLHttpRequest`. Cada chamada cuja URL casa com um filtro cadastrado é serializada e enviada ao service worker, que persiste o clone no IndexedDB. O painel lateral lista, busca e inspeciona o histórico. **Repetir** dispara a request clonada pela extensão (axios no service worker), com URL, headers e payload coletados — sem depender da aba original.
+Ao clicar em **Gravar**, a extensão injeta um interceptor na página (mundo MAIN). Esse hook envolve `fetch` e `XMLHttpRequest`. Cada chamada cuja URL casa com um filtro cadastrado é serializada e enviada ao service worker, que persiste o clone no IndexedDB (com data/hora de armazenamento). A janela flutuante lista, busca e inspeciona o histórico. **Repetir** dispara a request pela extensão (axios no service worker) e **grava um clone novo** na lista com a resposta dessa execução — o original permanece intacto. Itens gerados por **Repetir** aparecem na lista como `R GET`, `R POST`, etc. Ao concluir com sucesso, a janela mostra um toast (**Repetição do request realizada.**). O axios não passa pelo interceptor da página, então um clique gera um item, não dois.
 
 ```mermaid
 flowchart LR
@@ -18,11 +18,11 @@ flowchart LR
   subgraph ext [Extensao]
     SW[Service worker]
     Store[IndexedDB]
-    Panel[Side Panel]
+    UI[Janela flutuante]
   end
   Hook -->|"request clonada"| SW
   SW --> Store
-  Panel -->|"listar replay filtros"| SW
+  UI -->|"listar replay filtros"| SW
   SW -->|"axios replay"| API[API clonada]
   SW -->|"injetar hook"| Hook
 ```
@@ -43,14 +43,14 @@ flowchart LR
 2. Abra `chrome://extensions`.
 3. Ative **Modo do desenvolvedor**.
 4. Clique em **Carregar sem compactação**.
-5. Selecione a pasta `.output/chrome-mv3`.
+5. Selecione a pasta `deploy/chrome-mv3`.
 
-O ícone da extensão abre o **painel lateral**. No header do painel, **Abrir em janela** destaca a mesma UI numa janela flutuante (arrastável para outro monitor). Se a janela já existir, o botão só a foca.
+O ícone da extensão abre uma **janela flutuante** (arrastável para outro monitor). Se a janela já existir, o clique só a foca.
 
 ## Como usar
 
 1. Abra o site da aplicação (ou a [página de teste](#página-de-teste)).
-2. No painel, o bloco de **Filtros** já abre se não houver nenhum cadastrado. Adicione um padrão de URL, por exemplo `https://api.exemplo.com/*`.
+2. Na janela, o bloco de **Filtros** já abre se não houver nenhum cadastrado. Adicione um padrão de URL, por exemplo `https://api.exemplo.com/*`.
 
 ![Filtros com padrão jsonplaceholder cadastrado](docs/screenshots/filtros.png)
 
@@ -59,7 +59,7 @@ O ícone da extensão abre o **painel lateral**. No header do painel, **Abrir em
 ![Painel gravando com o botão Parar](docs/screenshots/gravando.png)
 
 4. Dispare as chamadas de API. Só entram requests `fetch`/`XHR` que casam com o filtro.
-5. Consulte a lista, abra o detalhe e use **Repetir**, **Copiar cURL**, **Baixar .http**, **Baixar JSON** ou **Excluir**. Em **Repetir**, aceite a permissão da origem da API se o Chrome pedir. Na lista, os botões **HTTP** e **JSON** baixam só aquela requisição (`.http` no formato do [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client); JSON completo); **Exportar todos** no rodapé gera um único `.json` com o histórico.
+5. Consulte a lista agrupada por dia de gravação (**Hoje** começa aberto; clique em **Ontem** ou numa data para revelar os clones daquele dia). Cada linha mostra a hora; o detalhe traz data e hora completas. Com **2+ filtros** de captura, use **Ver** para restringir por domínio. Clique numa linha para expandir o detalhe em accordion e use **Repetir**, **Copiar cURL**, **Baixar .http**, **Baixar JSON** ou **Excluir**. Em **Repetir**, aceite a permissão da origem da API se o Chrome pedir — a execução vira um **novo item** no topo da lista marcado com `R` no método (ex.: `R POST`), o original não muda, e um toast confirma a repetição. Na lista, os botões **HTTP** e **JSON** baixam só aquela requisição (`.http` no formato do [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client); JSON completo); **Exportar todos** no rodapé gera um único `.json` com o histórico.
 
 ![Lista de requests e detalhe com payload e resposta](docs/screenshots/lista-e-detalhe.png)
 
@@ -107,7 +107,7 @@ npm test
 npm run dev
 ```
 
-O `npm run dev` gera a extensão em `.output/chrome-mv3` com recarga automática.
+O `npm run dev` gera a extensão em `deploy/chrome-mv3` com recarga automática.
 
 Para regenerar os prints deste README:
 

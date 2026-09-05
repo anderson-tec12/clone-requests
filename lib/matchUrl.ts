@@ -164,3 +164,9 @@ export function matchesAnyFilter(url: string, patterns: string[]): boolean {
   if (patterns.length === 0) return false;
   return patterns.some((pattern) => matchUrl(url, pattern));
 }
+
+export function labelForMatchPattern(pattern: string): string {
+  const parsed = parseMatchPattern(pattern);
+  if (!parsed || parsed.all || parsed.host === null) return pattern;
+  return parsed.host;
+}

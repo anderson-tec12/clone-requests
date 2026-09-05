@@ -100,4 +100,38 @@ describe('filterRequests', () => {
       }).map((r) => r.id),
     ).toEqual(['1']);
   });
+
+  it('keeps only requests matching urlPattern', () => {
+    const mixed = [
+      item({ id: 'a', url: 'https://api.exemplo.com/users' }),
+      item({ id: 'b', url: 'https://api.outro.com/users' }),
+    ];
+    expect(
+      filterRequests(mixed, '', { urlPattern: 'https://api.exemplo.com/*' }).map(
+        (r) => r.id,
+      ),
+    ).toEqual(['a']);
+  });
+
+  it('keeps both hosts when urlPattern is omitted', () => {
+    const mixed = [
+      item({ id: 'a', url: 'https://api.exemplo.com/users' }),
+      item({ id: 'b', url: 'https://api.outro.com/users' }),
+    ];
+    expect(filterRequests(mixed, '').map((r) => r.id)).toEqual(['a', 'b']);
+  });
+
+  it('combines urlPattern with method chips', () => {
+    const mixed = [
+      item({ id: 'a', method: 'GET', url: 'https://api.exemplo.com/users' }),
+      item({ id: 'b', method: 'POST', url: 'https://api.exemplo.com/orders' }),
+      item({ id: 'c', method: 'GET', url: 'https://api.outro.com/users' }),
+    ];
+    expect(
+      filterRequests(mixed, '', {
+        urlPattern: 'https://api.exemplo.com/*',
+        methods: ['GET'],
+      }).map((r) => r.id),
+    ).toEqual(['a']);
+  });
 });

@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>clone-requests</title>
-    <link rel="stylesheet" href="../../../entrypoints/sidepanel/style.css" />
+    <link rel="stylesheet" href="../../../entrypoints/ui/style.css" />
   </head>
   <body>
     <header class="top">
@@ -18,73 +18,134 @@
     <p class="status">Gravando requisições que casam com os filtros.</p>
 
     <section class="filters">
-      <button type="button" class="linkish">Filtros <span>(1)</span></button>
+      <button type="button" class="linkish">Filtros <span>(2)</span></button>
     </section>
 
     <section class="search">
-      <input type="search" placeholder="Buscar URL, método ou status" />
+      <label class="view-filter">
+        <span>Ver</span>
+        <select aria-label="Filtrar lista por domínio">
+          <option value="">Todos</option>
+          <option value="https://jsonplaceholder.typicode.com/*" selected>
+            jsonplaceholder.typicode.com
+          </option>
+          <option value="https://api.outro.com/*">api.outro.com</option>
+        </select>
+      </label>
+      <input type="search" placeholder="Buscar URL, método, status, headers ou body" />
+      <div class="chips" aria-label="Filtrar por método">
+        <button type="button" class="chip">GET</button>
+        <button type="button" class="chip">POST</button>
+        <button type="button" class="chip">PUT</button>
+        <button type="button" class="chip">PATCH</button>
+        <button type="button" class="chip">DELETE</button>
+      </div>
+      <div class="chips" aria-label="Filtrar por status">
+        <button type="button" class="chip">2xx</button>
+        <button type="button" class="chip">4xx</button>
+        <button type="button" class="chip">5xx</button>
+      </div>
     </section>
 
     <section class="layout">
       <ul class="request-list">
-        <li>
-          <span class="method GET">GET</span>
-          <span class="status-code ok">200</span>
-          <span title="https://jsonplaceholder.typicode.com/todos/1">/todos/1</span>
-          <span class="muted">20:12:04</span>
-          <button type="button" class="json-btn">JSON</button>
-        </li>
-        <li class="active">
-          <span class="method POST">POST</span>
-          <span class="status-code ok">201</span>
-          <span title="https://jsonplaceholder.typicode.com/posts">/posts</span>
-          <span class="muted">20:12:08</span>
-          <button type="button" class="json-btn">JSON</button>
-        </li>
-      </ul>
-      <article class="detail">
-        <h2>POST https://jsonplaceholder.typicode.com/posts</h2>
-        <p class="muted">201 Created · 184 ms · 20:12:08</p>
-        <div class="actions">
-          <button type="button">Repetir</button>
-          <button type="button">Copiar cURL</button>
-          <button type="button">Baixar JSON</button>
-          <button type="button" class="danger ghost">Excluir</button>
-        </div>
-        <section class="kv">
-          <h3>Query params</h3>
-          <pre>(nenhum)</pre>
-        </section>
-        <section class="kv">
-          <h3>Headers da requisição</h3>
-          <pre>content-type: application/json</pre>
-        </section>
-        <section class="kv">
-          <h3>Payload</h3>
-          <pre>{
+        <li class="day-group">
+          <button type="button" class="day-header" aria-expanded="true">
+            <span class="day-chevron">▾</span>
+            <span>Hoje (3)</span>
+          </button>
+          <ul class="day-items">
+            <li>
+              <div class="request-row">
+                <span class="method POST">R POST</span>
+                <span class="status-code ok">201</span>
+                <span
+                  class="request-url"
+                  title="https://jsonplaceholder.typicode.com/posts"
+                >/posts</span>
+                <span class="muted">20:12:15</span>
+                <button type="button" class="export-btn">HTTP</button>
+                <button type="button" class="export-btn">JSON</button>
+              </div>
+            </li>
+            <li>
+              <div class="request-row">
+                <span class="method GET">GET</span>
+                <span class="status-code ok">200</span>
+                <span
+                  class="request-url"
+                  title="https://jsonplaceholder.typicode.com/todos/1"
+                >/todos/1</span>
+                <span class="muted">20:12:04</span>
+                <button type="button" class="export-btn">HTTP</button>
+                <button type="button" class="export-btn">JSON</button>
+              </div>
+            </li>
+            <li class="active">
+              <div class="request-row">
+                <span class="method POST">POST</span>
+                <span class="status-code ok">201</span>
+                <span
+                  class="request-url"
+                  title="https://jsonplaceholder.typicode.com/posts"
+                >/posts</span>
+                <span class="muted">20:12:08</span>
+                <button type="button" class="export-btn">HTTP</button>
+                <button type="button" class="export-btn">JSON</button>
+              </div>
+              <div class="request-detail">
+                <h2>POST https://jsonplaceholder.typicode.com/posts</h2>
+                <p class="muted">201 Created · 184 ms · 05/09/2026, 20:12:08</p>
+                <div class="actions">
+                  <button type="button">Repetir</button>
+                  <button type="button">Copiar cURL</button>
+                  <button type="button">Baixar JSON</button>
+                  <button type="button" class="danger ghost">Excluir</button>
+                </div>
+                <section class="kv">
+                  <h3>Query params</h3>
+                  <pre>(nenhum)</pre>
+                </section>
+                <section class="kv">
+                  <h3>Headers da requisição</h3>
+                  <pre>content-type: application/json</pre>
+                </section>
+                <section class="kv">
+                  <h3>Payload</h3>
+                  <pre>{
   "title": "clone-requests",
   "body": "teste",
   "userId": 1
 }</pre>
-        </section>
-        <section class="kv">
-          <h3>Resposta</h3>
-          <pre>{
+                </section>
+                <section class="kv">
+                  <h3>Resposta</h3>
+                  <pre>{
   "title": "clone-requests",
   "body": "teste",
   "userId": 1,
   "id": 101
 }</pre>
-        </section>
-        <section class="kv">
-          <h3>Headers da resposta</h3>
-          <pre>content-type: application/json; charset=utf-8</pre>
-        </section>
-      </article>
+                </section>
+                <section class="kv">
+                  <h3>Headers da resposta</h3>
+                  <pre>content-type: application/json; charset=utf-8</pre>
+                </section>
+              </div>
+            </li>
+          </ul>
+        </li>
+        <li class="day-group">
+          <button type="button" class="day-header" aria-expanded="false">
+            <span class="day-chevron">▸</span>
+            <span>Ontem (1)</span>
+          </button>
+        </li>
+      </ul>
     </section>
 
     <footer class="footer">
-      <button type="button">Exportar todos</button>
+      <button type="button">Exportar filtrados (3)</button>
       <button type="button" class="danger ghost">Limpar histórico</button>
     </footer>
   </body>

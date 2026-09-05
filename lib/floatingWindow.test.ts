@@ -6,7 +6,7 @@ import {
   floatingCreateOptions,
 } from './floatingWindow';
 
-const PANEL_URL = 'chrome-extension://abc/sidepanel.html';
+const PANEL_URL = 'chrome-extension://abc/ui.html';
 
 describe('floatingCreateOptions', () => {
   it('opens a popup with the panel url and default size', () => {

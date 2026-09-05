@@ -14,6 +14,7 @@ export type ClonedRequest = {
   responseHeaders: Record<string, string>;
   responseBody: string | null;
   responseTruncated: boolean;
+  fromReplay?: boolean;
   lastReplay?: ReplayResult;
 };
 
@@ -58,7 +59,6 @@ export type ExtensionMessage =
   | { type: 'CLEAR_REQUESTS' }
   | { type: 'REPLAY'; id: string; draft?: ReplayDraftPayload }
   | { type: 'CAPTURED'; payload: CapturedPayload }
-  | { type: 'GET_TAB_CONFIG' }
-  | { type: 'OPEN_FLOATING_WINDOW' };
+  | { type: 'GET_TAB_CONFIG' };
 
 export const MESSAGE_SOURCE = 'clone-requests';
