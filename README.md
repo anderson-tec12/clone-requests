@@ -45,7 +45,7 @@ flowchart LR
 4. Clique em **Carregar sem compactação**.
 5. Selecione a pasta `deploy/chrome-mv3`.
 
-O ícone da extensão abre uma **janela flutuante** (arrastável para outro monitor). Se a janela já existir, o clique só a foca.
+O ícone da extensão abre ou foca a **janela flutuante** (ou a aba, se você já tiver usado **Abrir em aba**). Se a UI já existir, o clique só a foca — não abre uma segunda instância. Na janela, o botão **Abrir em aba** move o painel para uma aba na janela Chrome em uso; **Abrir em janela** faz o caminho inverso.
 
 ## Como usar
 

@@ -2,8 +2,10 @@ import { browser } from 'wxt/browser';
 import { recordingBadgeText } from '../lib/badge';
 import { buildClonedRequest, clonedRequestFromReplay } from '../lib/clone';
 import {
-  findFloatingWindowId,
+  findUiLocation,
+  floatingAdoptOptions,
   floatingCreateOptions,
+  pickDockWindowId,
 } from '../lib/floatingWindow';
 import { matchesAnyFilter } from '../lib/matchUrl';
 import { isRestrictedUrl } from '../lib/origin';
@@ -29,7 +31,7 @@ export default defineBackground(() => {
   void restoreRecordingTabs();
 
   browser.action.onClicked.addListener(() => {
-    void openFloatingWindow();
+    void openOrFocusUi();
   });
 
   browser.runtime.onMessage.addListener((message, sender) => {
@@ -76,7 +78,7 @@ async function updateRecordingBadge() {
 
 async function handleMessage(
   message: ExtensionMessage,
-  sender: { tab?: { id?: number; url?: string } },
+  sender: { tab?: { id?: number; url?: string; windowId?: number } },
 ) {
   switch (message.type) {
     case 'GET_STATE':
@@ -116,24 +118,87 @@ async function handleMessage(
       return replayRequest(message.id, message.draft);
     case 'CAPTURED':
       return captureFromTab(message.payload, sender);
+    case 'TOGGLE_UI_WINDOW':
+      return toggleUiWindow(sender);
     default:
       return { error: 'Mensagem desconhecida' };
   }
 }
 
-async function openFloatingWindow() {
+async function openOrFocusUi() {
   const panelUrl = browser.runtime.getURL('/ui.html');
-  const windows = await browser.windows.getAll({
-    populate: true,
-    windowTypes: ['popup'],
-  });
-  const existingId = findFloatingWindowId(windows, panelUrl);
-  if (existingId != null) {
-    await browser.windows.update(existingId, { focused: true });
-    return { ok: true, windowId: existingId };
+  const windows = await browser.windows.getAll({ populate: true });
+  const location = findUiLocation(windows, panelUrl);
+  if (location != null) {
+    await browser.tabs.update(location.tabId, { active: true });
+    await browser.windows.update(location.windowId, { focused: true });
+    return { ok: true, windowId: location.windowId, tabId: location.tabId };
   }
   const created = await browser.windows.create(floatingCreateOptions(panelUrl));
   return { ok: true, windowId: created?.id ?? null };
+}
+
+async function toggleUiWindow(sender: {
+  tab?: { id?: number; windowId?: number };
+}) {
+  const tabId = sender.tab?.id;
+  const currentWindowId = sender.tab?.windowId;
+  if (tabId == null || currentWindowId == null) {
+    return { error: 'Aba da UI não encontrada.' };
+  }
+
+  const current = await browser.windows.get(currentWindowId);
+  if (current.type === 'popup') {
+    let lastFocusedNormalId: number | null = null;
+    try {
+      const focused = await browser.windows.getLastFocused({
+        windowTypes: ['normal'],
+      });
+      lastFocusedNormalId = focused.id ?? null;
+    } catch {
+      lastFocusedNormalId = null;
+    }
+
+    const normals = await browser.windows.getAll({ windowTypes: ['normal'] });
+    const otherNormalIds = normals
+      .map((win) => win.id)
+      .filter((id): id is number => id != null);
+    const dockId = pickDockWindowId(
+      currentWindowId,
+      lastFocusedNormalId,
+      otherNormalIds,
+    );
+
+    if (dockId != null) {
+      await browser.tabs.move(tabId, { windowId: dockId, index: -1 });
+      await browser.tabs.update(tabId, { active: true });
+      await browser.windows.update(dockId, { focused: true });
+      return { ok: true, kind: 'tab' as const, windowId: dockId, tabId };
+    }
+
+    const created = await browser.windows.create({
+      tabId,
+      type: 'normal',
+      focused: true,
+    });
+    return {
+      ok: true,
+      kind: 'tab' as const,
+      windowId: created?.id ?? null,
+      tabId,
+    };
+  }
+
+  const created = await browser.windows.create(floatingAdoptOptions(tabId));
+  if (created?.id != null) {
+    await browser.windows.update(created.id, { focused: true });
+  }
+  return {
+    ok: true,
+    kind: 'popup' as const,
+    windowId: created?.id ?? null,
+    tabId,
+  };
 }
 
 async function startRecording(tabId: number) {

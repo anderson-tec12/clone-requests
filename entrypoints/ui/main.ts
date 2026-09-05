@@ -49,6 +49,9 @@ type PanelState = BackgroundState & {
 };
 
 const recordBtn = document.querySelector('#record-btn') as HTMLButtonElement;
+const windowModeBtn = document.querySelector(
+  '#window-mode-btn',
+) as HTMLButtonElement;
 const tabLabel = document.querySelector('#tab-label') as HTMLElement;
 const statusEl = document.querySelector('#status') as HTMLElement;
 const toastEl = document.querySelector('#toast') as HTMLElement;
@@ -89,8 +92,10 @@ const EXAMPLE_FILTER = 'https://api.exemplo.com/*';
 void boot();
 
 async function boot() {
+  await syncWindowModeLabel();
   await refresh();
   recordBtn.addEventListener('click', () => void toggleRecording());
+  windowModeBtn.addEventListener('click', () => void toggleWindowMode());
   filtersToggle.addEventListener('click', () => {
     filtersPanel.hidden = !filtersPanel.hidden;
   });
@@ -132,6 +137,37 @@ async function boot() {
   browser.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
     if (tab.active && (changeInfo.url || changeInfo.title)) void refresh();
   });
+}
+
+async function syncWindowModeLabel() {
+  try {
+    const win = await browser.windows.getCurrent();
+    setWindowModeLabel(win.type === 'popup' ? 'popup' : 'tab');
+  } catch {
+    setWindowModeLabel('popup');
+  }
+}
+
+function setWindowModeLabel(kind: 'popup' | 'tab') {
+  const label = kind === 'popup' ? 'Abrir em aba' : 'Abrir em janela';
+  windowModeBtn.textContent = label;
+  windowModeBtn.title = label;
+  windowModeBtn.setAttribute('aria-label', label);
+}
+
+async function toggleWindowMode() {
+  const result = (await browser.runtime.sendMessage({
+    type: 'TOGGLE_UI_WINDOW',
+  })) as { ok?: boolean; kind?: 'popup' | 'tab'; error?: string };
+  if (result?.error) {
+    showStatus(result.error, true);
+    return;
+  }
+  if (result?.kind === 'popup' || result?.kind === 'tab') {
+    setWindowModeLabel(result.kind);
+  } else {
+    await syncWindowModeLabel();
+  }
 }
 
 async function resolveTargetTab() {
