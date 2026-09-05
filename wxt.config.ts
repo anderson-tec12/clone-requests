@@ -1,17 +1,18 @@
 import { defineConfig } from 'wxt';
 
 export default defineConfig({
+  outDir: 'deploy',
   manifest: {
     name: 'clone-requests',
     description:
-      'Clona requisições de API (URL, headers, query, payload e resposta) para consultar e repetir.',
-    version: '0.1.0',
+      'Grave, consulte e repita requisições de API (fetch e XHR): URL, headers, payload, cURL e arquivo .http.',
+    version: '1.2.0',
     permissions: [
-      'sidePanel',
       'storage',
       'scripting',
       'activeTab',
       'tabs',
+      'windows',
       'webNavigation',
     ],
     optional_host_permissions: ['*://*/*'],

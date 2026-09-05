@@ -1,5 +1,3 @@
-import type { ReplayInit } from './replay';
-
 export type ClonedRequest = {
   id: string;
   tabId: number;
@@ -16,6 +14,7 @@ export type ClonedRequest = {
   responseHeaders: Record<string, string>;
   responseBody: string | null;
   responseTruncated: boolean;
+  fromReplay?: boolean;
   lastReplay?: ReplayResult;
 };
 
@@ -41,9 +40,11 @@ export type CapturedPayload = {
   durationMs: number;
 };
 
-export type ReplayInPageMessage = {
-  type: 'REPLAY_IN_PAGE';
-  payload: ReplayInit;
+export type ReplayDraftPayload = {
+  method: string;
+  url: string;
+  requestHeaders: Record<string, string>;
+  requestBody: string | null;
 };
 
 export type ExtensionMessage =
@@ -56,9 +57,9 @@ export type ExtensionMessage =
   | { type: 'GET_REQUEST'; id: string }
   | { type: 'DELETE_REQUEST'; id: string }
   | { type: 'CLEAR_REQUESTS' }
-  | { type: 'REPLAY'; id: string; tabId: number }
-  | ReplayInPageMessage
+  | { type: 'REPLAY'; id: string; draft?: ReplayDraftPayload }
   | { type: 'CAPTURED'; payload: CapturedPayload }
-  | { type: 'GET_TAB_CONFIG' };
+  | { type: 'GET_TAB_CONFIG' }
+  | { type: 'TOGGLE_UI_WINDOW' };
 
 export const MESSAGE_SOURCE = 'clone-requests';

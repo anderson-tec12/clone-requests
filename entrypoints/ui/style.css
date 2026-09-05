@@ -39,11 +39,63 @@ body {
   border-bottom: 1px solid var(--line);
 }
 
+.search {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.view-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.view-filter select {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  color: var(--text);
+  background: #0c0f16;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 7px 9px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  border-radius: 999px;
+}
+
+.chip.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
 .top {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.top-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .brand {
@@ -118,6 +170,24 @@ button:disabled {
 .status.error {
   background: #2a1518;
   color: #ffb4bc;
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 56px;
+  transform: translateX(-50%);
+  z-index: 100;
+  max-width: calc(100% - 24px);
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #14301f;
+  color: #9dffc4;
+  border: 1px solid #2a6b45;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
 }
 
 .hint {
@@ -207,41 +277,124 @@ input {
 .layout {
   flex: 1;
   min-height: 0;
-  display: grid;
-  grid-template-rows: minmax(140px, 38%) 1fr;
+  display: flex;
+  flex-direction: column;
 }
 
 .request-list {
   margin: 0;
+  flex: 1;
+  min-height: 0;
   overflow: auto;
-  border-bottom: 1px solid var(--line);
 }
 
-.request-list li {
-  display: grid;
-  grid-template-columns: 52px 40px 1fr auto auto;
-  gap: 8px;
+.request-list > li.day-group {
+  display: block;
+  padding: 0;
+  cursor: default;
+  border-bottom: 1px solid #1c2230;
+  font-size: 12px;
+}
+
+.request-list > li.day-group:hover {
+  background: transparent;
+}
+
+.day-header {
+  display: flex;
   align-items: center;
+  gap: 8px;
+  width: 100%;
+  border: 0;
+  background: #12161f;
+  color: var(--text);
   padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+
+.day-header:hover {
+  background: var(--bg-elev);
+}
+
+.day-chevron {
+  width: 1em;
+  color: var(--muted);
+}
+
+.day-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.day-items li {
+  display: block;
+  padding: 0;
   cursor: pointer;
   border-bottom: 1px solid #1c2230;
   font-size: 12px;
 }
 
-.request-list .json-btn {
+.day-items li:last-child {
+  border-bottom: 0;
+}
+
+.request-list li.empty-row {
+  display: block;
+  padding: 8px 12px;
+  cursor: default;
+  border-bottom: 1px solid #1c2230;
+  font-size: 12px;
+}
+
+.request-row {
+  display: grid;
+  grid-template-columns: auto 40px 1fr auto auto auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 12px;
+}
+
+.request-url {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.request-row .muted {
+  white-space: nowrap;
+}
+
+.request-list .export-btn {
   padding: 2px 6px;
   font-size: 10px;
   letter-spacing: 0.04em;
 }
 
-.request-list li:hover,
-.request-list li.active {
+.day-items li:hover,
+.day-items li.active {
   background: var(--bg-elev);
+}
+
+.request-detail {
+  padding: 0 12px 12px;
+  border-top: 1px solid var(--line);
+}
+
+.request-detail h2 {
+  margin: 10px 0 8px;
+  font-size: 13px;
+  word-break: break-all;
 }
 
 .method {
   font-weight: 700;
   font-size: 11px;
+  white-space: nowrap;
 }
 
 .method.GET { color: #5b8cff; }
@@ -253,22 +406,6 @@ input {
 .status-code.ok { color: var(--ok); }
 .status-code.warn { color: var(--warn); }
 .status-code.err { color: var(--danger); }
-
-.detail {
-  overflow: auto;
-  padding: 12px;
-}
-
-.detail.empty {
-  display: grid;
-  place-items: center;
-}
-
-.detail h2 {
-  margin: 0 0 8px;
-  font-size: 13px;
-  word-break: break-all;
-}
 
 .actions {
   display: flex;
@@ -300,6 +437,25 @@ pre {
   font-size: 11px;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.kv textarea,
+.kv input {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 8px;
+  background: #0c0f16;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 11px;
+  resize: vertical;
+}
+
+.kv input {
+  resize: none;
 }
 
 .footer {

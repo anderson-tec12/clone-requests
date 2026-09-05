@@ -1,12 +1,6 @@
 import { headersToRecord, parseRawResponseHeaders } from '../lib/headers';
 import { matchesAnyFilter } from '../lib/matchUrl';
-import {
-  MESSAGE_SOURCE,
-  isPageReplayMessage,
-  type PageConfigMessage,
-  type PageReplayResultPayload,
-} from '../lib/protocol';
-import type { ReplayInit } from '../lib/replay';
+import { MESSAGE_SOURCE, type PageConfigMessage } from '../lib/protocol';
 
 type HookConfig = {
   recording: boolean;
@@ -181,50 +175,4 @@ export default defineUnlistedScript(() => {
     }
     return originalSend.call(this, body);
   };
-
-  window.addEventListener('message', (event: MessageEvent) => {
-    if (event.source !== window) return;
-    if (!isPageReplayMessage(event.data)) return;
-    void runReplay(event.data.requestId, event.data.payload);
-  });
-
-  function emitReplayResult(
-    requestId: string,
-    result?: PageReplayResultPayload,
-    error?: string,
-  ) {
-    window.postMessage(
-      {
-        source: MESSAGE_SOURCE,
-        type: 'replay-result',
-        requestId,
-        ...(result ? { result } : {}),
-        ...(error ? { error } : {}),
-      },
-      '*',
-    );
-  }
-
-  async function runReplay(requestId: string, payload: ReplayInit) {
-    const started = performance.now();
-    try {
-      const init: RequestInit = {
-        method: payload.method,
-        headers: payload.headers,
-        credentials: payload.credentials,
-      };
-      if (payload.body) init.body = payload.body;
-      const response = await originalFetch(payload.url, init);
-      emitReplayResult(requestId, {
-        status: response.status,
-        statusText: response.statusText,
-        responseHeaders: headersToRecord(response.headers),
-        responseBody: await response.text(),
-        durationMs: Math.round(performance.now() - started),
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      emitReplayResult(requestId, undefined, message || 'Falha ao repetir a requisição.');
-    }
-  }
 });

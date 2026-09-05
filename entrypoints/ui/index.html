@@ -12,7 +12,18 @@
         <strong>clone-requests</strong>
         <span id="tab-label" class="muted">Nenhuma aba</span>
       </div>
-      <button id="record-btn" type="button" class="record">Gravar</button>
+      <div class="top-actions">
+        <button
+          id="window-mode-btn"
+          type="button"
+          class="ghost"
+          title="Abrir em aba"
+          aria-label="Abrir em aba"
+        >
+          Abrir em aba
+        </button>
+        <button id="record-btn" type="button" class="record">Gravar</button>
+      </div>
     </header>
 
     <p id="status" class="status" hidden></p>
@@ -45,20 +56,41 @@
     </section>
 
     <section class="search">
-      <input id="search-input" type="search" placeholder="Buscar URL, método ou status" />
+      <label id="view-filter-wrap" class="view-filter" hidden>
+        <span>Ver</span>
+        <select id="view-filter" aria-label="Filtrar lista por domínio">
+          <option value="">Todos</option>
+        </select>
+      </label>
+      <input
+        id="search-input"
+        type="search"
+        placeholder="Buscar URL, método, status, headers ou body"
+      />
+      <div class="chips" id="method-chips" aria-label="Filtrar por método">
+        <button type="button" class="chip" data-method="GET">GET</button>
+        <button type="button" class="chip" data-method="POST">POST</button>
+        <button type="button" class="chip" data-method="PUT">PUT</button>
+        <button type="button" class="chip" data-method="PATCH">PATCH</button>
+        <button type="button" class="chip" data-method="DELETE">DELETE</button>
+      </div>
+      <div class="chips" id="status-chips" aria-label="Filtrar por status">
+        <button type="button" class="chip" data-status="2xx">2xx</button>
+        <button type="button" class="chip" data-status="4xx">4xx</button>
+        <button type="button" class="chip" data-status="5xx">5xx</button>
+      </div>
     </section>
 
     <section class="layout">
       <ul id="request-list" class="request-list"></ul>
-      <article id="detail" class="detail empty">
-        <p class="muted">Selecione uma requisição para ver os detalhes.</p>
-      </article>
     </section>
 
     <footer class="footer">
       <button id="export-all-btn" type="button" disabled>Exportar todos</button>
       <button id="clear-btn" type="button" class="danger ghost">Limpar histórico</button>
     </footer>
+
+    <div id="toast" class="toast" role="status" hidden></div>
 
     <script type="module" src="./main.ts"></script>
   </body>

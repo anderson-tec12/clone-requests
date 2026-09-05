@@ -1,9 +1,15 @@
 import { browser } from 'wxt/browser';
-import { buildClonedRequest } from '../lib/clone';
+import { recordingBadgeText } from '../lib/badge';
+import { buildClonedRequest, clonedRequestFromReplay } from '../lib/clone';
+import {
+  findUiLocation,
+  floatingAdoptOptions,
+  floatingCreateOptions,
+  pickDockWindowId,
+} from '../lib/floatingWindow';
 import { matchesAnyFilter } from '../lib/matchUrl';
-import { buildReplayInit } from '../lib/replay';
 import { isRestrictedUrl } from '../lib/origin';
-import { truncateBody } from '../lib/body';
+import { buildReplayInit, executeReplay } from '../lib/replay';
 import {
   getFilters,
   getRecordingTabIds,
@@ -16,16 +22,17 @@ import {
   getRequest,
   listRequests,
   saveRequest,
-  updateRequest,
 } from '../lib/storage';
-import type { PageReplayResultPayload } from '../lib/protocol';
-import type { CapturedPayload, ClonedRequest, ExtensionMessage, ReplayResult } from '../lib/types';
+import type { CapturedPayload, ExtensionMessage } from '../lib/types';
 
 const recordingTabs = new Set<number>();
 
 export default defineBackground(() => {
   void restoreRecordingTabs();
-  void browser.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
+
+  browser.action.onClicked.addListener(() => {
+    void openOrFocusUi();
+  });
 
   browser.runtime.onMessage.addListener((message, sender) => {
     return handleMessage(message as ExtensionMessage, sender);
@@ -33,13 +40,16 @@ export default defineBackground(() => {
 
   browser.webNavigation.onCommitted.addListener((details) => {
     if (!recordingTabs.has(details.tabId)) return;
-    void injectIntoTab(details.tabId);
+    void injectIntoTab(details.tabId).then((ok) => {
+      if (ok) void sendConfig(details.tabId, true);
+    });
   });
 
   browser.tabs.onRemoved.addListener((tabId) => {
     if (!recordingTabs.has(tabId)) return;
     recordingTabs.delete(tabId);
     void persistRecordingTabs();
+    void updateRecordingBadge();
   });
 });
 
@@ -47,15 +57,28 @@ async function restoreRecordingTabs() {
   const ids = await getRecordingTabIds();
   recordingTabs.clear();
   for (const id of ids) recordingTabs.add(id);
+  await updateRecordingBadge();
+  for (const tabId of ids) {
+    const ok = await injectIntoTab(tabId);
+    if (ok) await sendConfig(tabId, true);
+  }
 }
 
 async function persistRecordingTabs() {
   await setRecordingTabIds([...recordingTabs]);
 }
 
+async function updateRecordingBadge() {
+  const text = recordingBadgeText(recordingTabs.size);
+  await browser.action.setBadgeText({ text });
+  if (text) {
+    await browser.action.setBadgeBackgroundColor({ color: '#e23d4c' });
+  }
+}
+
 async function handleMessage(
   message: ExtensionMessage,
-  sender: { tab?: { id?: number; url?: string } },
+  sender: { tab?: { id?: number; url?: string; windowId?: number } },
 ) {
   switch (message.type) {
     case 'GET_STATE':
@@ -92,14 +115,90 @@ async function handleMessage(
       await clearRequests();
       return { ok: true };
     case 'REPLAY':
-      return replayRequest(message.id, message.tabId);
-    case 'REPLAY_IN_PAGE':
-      return;
+      return replayRequest(message.id, message.draft);
     case 'CAPTURED':
       return captureFromTab(message.payload, sender);
+    case 'TOGGLE_UI_WINDOW':
+      return toggleUiWindow(sender);
     default:
       return { error: 'Mensagem desconhecida' };
   }
+}
+
+async function openOrFocusUi() {
+  const panelUrl = browser.runtime.getURL('/ui.html');
+  const windows = await browser.windows.getAll({ populate: true });
+  const location = findUiLocation(windows, panelUrl);
+  if (location != null) {
+    await browser.tabs.update(location.tabId, { active: true });
+    await browser.windows.update(location.windowId, { focused: true });
+    return { ok: true, windowId: location.windowId, tabId: location.tabId };
+  }
+  const created = await browser.windows.create(floatingCreateOptions(panelUrl));
+  return { ok: true, windowId: created?.id ?? null };
+}
+
+async function toggleUiWindow(sender: {
+  tab?: { id?: number; windowId?: number };
+}) {
+  const tabId = sender.tab?.id;
+  const currentWindowId = sender.tab?.windowId;
+  if (tabId == null || currentWindowId == null) {
+    return { error: 'Aba da UI não encontrada.' };
+  }
+
+  const current = await browser.windows.get(currentWindowId);
+  if (current.type === 'popup') {
+    let lastFocusedNormalId: number | null = null;
+    try {
+      const focused = await browser.windows.getLastFocused({
+        windowTypes: ['normal'],
+      });
+      lastFocusedNormalId = focused.id ?? null;
+    } catch {
+      lastFocusedNormalId = null;
+    }
+
+    const normals = await browser.windows.getAll({ windowTypes: ['normal'] });
+    const otherNormalIds = normals
+      .map((win) => win.id)
+      .filter((id): id is number => id != null);
+    const dockId = pickDockWindowId(
+      currentWindowId,
+      lastFocusedNormalId,
+      otherNormalIds,
+    );
+
+    if (dockId != null) {
+      await browser.tabs.move(tabId, { windowId: dockId, index: -1 });
+      await browser.tabs.update(tabId, { active: true });
+      await browser.windows.update(dockId, { focused: true });
+      return { ok: true, kind: 'tab' as const, windowId: dockId, tabId };
+    }
+
+    const created = await browser.windows.create({
+      tabId,
+      type: 'normal',
+      focused: true,
+    });
+    return {
+      ok: true,
+      kind: 'tab' as const,
+      windowId: created?.id ?? null,
+      tabId,
+    };
+  }
+
+  const created = await browser.windows.create(floatingAdoptOptions(tabId));
+  if (created?.id != null) {
+    await browser.windows.update(created.id, { focused: true });
+  }
+  return {
+    ok: true,
+    kind: 'popup' as const,
+    windowId: created?.id ?? null,
+    tabId,
+  };
 }
 
 async function startRecording(tabId: number) {
@@ -113,9 +212,17 @@ async function startRecording(tabId: number) {
     return { error: 'Não é possível gravar nesta página.' };
   }
 
+  const injected = await injectIntoTab(tabId);
+  if (!injected) {
+    return {
+      error:
+        'Não foi possível injetar o interceptor nesta página. Recarregue a aba e tente de novo.',
+    };
+  }
+
   recordingTabs.add(tabId);
   await persistRecordingTabs();
-  await injectIntoTab(tabId);
+  await updateRecordingBadge();
   await sendConfig(tabId, true);
   return { ok: true, recordingTabIds: [...recordingTabs] };
 }
@@ -123,27 +230,29 @@ async function startRecording(tabId: number) {
 async function stopRecording(tabId: number) {
   recordingTabs.delete(tabId);
   await persistRecordingTabs();
+  await updateRecordingBadge();
   await sendConfig(tabId, false);
   return { ok: true, recordingTabIds: [...recordingTabs] };
 }
 
-async function injectIntoTab(tabId: number, rethrow = false) {
+async function injectIntoTab(tabId: number): Promise<boolean> {
   try {
     await browser.scripting.executeScript({
       target: { tabId, allFrames: true },
-        files: ['/interceptor.js'],
+      files: ['/interceptor.js'],
       world: 'MAIN',
       injectImmediately: true,
     });
     await browser.scripting.executeScript({
       target: { tabId, allFrames: true },
-        files: ['/bridge.js'],
+      files: ['/bridge.js'],
       world: 'ISOLATED',
       injectImmediately: true,
     });
+    return true;
   } catch (error) {
     console.warn('clone-requests: falha ao injetar scripts', error);
-    if (rethrow) throw error;
+    return false;
   }
 }
 
@@ -185,52 +294,28 @@ async function captureFromTab(
   return { ok: true, id: item.id };
 }
 
-async function replayRequest(id: string, tabId: number) {
+async function replayRequest(
+  id: string,
+  draft?: {
+    method: string;
+    url: string;
+    requestHeaders: Record<string, string>;
+    requestBody: string | null;
+  },
+) {
   const req = await getRequest(id);
   if (!req) return { error: 'Requisição não encontrada.' };
 
+  const source = draft ?? req;
+
   try {
-    const lastReplay = await replayInTab(tabId, req);
-    const updated = await updateRequest(id, { lastReplay });
-    return { request: updated, lastReplay };
+    const value = await executeReplay(buildReplayInit(source));
+    const item = clonedRequestFromReplay(req, source, value);
+    await saveRequest(item);
+    void browser.runtime.sendMessage({ type: 'REQUESTS_UPDATED' }).catch(() => undefined);
+    return { request: item };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     return { error: `Falha ao repetir: ${message}` };
   }
-}
-
-async function replayInTab(tabId: number, req: ClonedRequest): Promise<ReplayResult> {
-  await injectIntoTab(tabId, true);
-  const payload = buildReplayInit(req);
-  let response: { result?: PageReplayResultPayload; error?: string } | undefined;
-  try {
-    response = (await browser.tabs.sendMessage(
-      tabId,
-      { type: 'REPLAY_IN_PAGE', payload },
-      { frameId: 0 },
-    )) as { result?: PageReplayResultPayload; error?: string } | undefined;
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    if (/Receiving end does not exist/i.test(message)) {
-      throw new Error('Não foi possível falar com a página. Recarregue a aba e tente de novo.');
-    }
-    throw new Error(
-      message || 'Não foi possível falar com a página. Recarregue a aba e tente de novo.',
-    );
-  }
-
-  if (response?.error) throw new Error(response.error);
-  const value = response?.result;
-  if (!value) throw new Error('a página não retornou resultado');
-
-  const truncated = truncateBody(value.responseBody || null);
-  return {
-    replayedAt: Date.now(),
-    durationMs: value.durationMs,
-    status: value.status,
-    statusText: value.statusText,
-    responseHeaders: value.responseHeaders,
-    responseBody: truncated.body,
-    responseTruncated: truncated.truncated,
-  };
 }
